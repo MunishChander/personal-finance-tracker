@@ -1,0 +1,16 @@
+{
+  "name": "@personal-finance-tracker/database",
+  "version": "1.0.0",
+  "description": "PostgreSQL migrations and schema",
+  "scripts": {
+    "migrate": "node migrations/run-migrations.js",
+    "migrate:create": "node migrations/create-migration.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.9"
+  }
+}

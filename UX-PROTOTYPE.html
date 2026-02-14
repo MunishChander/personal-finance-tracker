@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker - UX Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Portfolio Summary */
+        .portfolio-summary {
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+            padding: 32px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .portfolio-summary h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .total-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 24px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .summary-value.green {
+            color: #10b981;
+        }
+
+        .summary-value.orange {
+            color: #f59e0b;
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        select {
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #374151;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            border-color: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* Assets Container */
+        .assets-container {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            margin-bottom: 30px;
+        }
+
+        .asset-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+            padding: 16px 0;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .section-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        /* Table Styles */
+        .table-wrapper {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .asset-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .asset-table thead {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .asset-table th {
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            white-space: nowrap;
+        }
+
+        .asset-table tbody tr {
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.2s;
+        }
+
+        .asset-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .asset-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .asset-table td {
+            padding: 16px 12px;
+            color: #374151;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .asset-name {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .name-primary {
+            font-weight: 600;
+            color: #111827;
+            font-size: 14px;
+        }
+
+        .name-secondary {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .value-cell {
+            font-weight: 600;
+            color: #111827;
+            font-size: 15px;
+        }
+
+        .days-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #f3f4f6;
+            color: #374151;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .days-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .warning-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .row-warning {
+            background: #fffbeb !important;
+        }
+
+        .row-warning:hover {
+            background: #fef3c7 !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .btn-edit-sm {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .btn-edit-sm:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete-sm {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .btn-delete-sm:hover {
+            background: #fee2e2;
+        }
+
+        .btn-more {
+            background: #f3f4f6;
+            color: #6b7280;
+            padding: 6px 10px;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .btn-more:hover {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        /* Asset Cards */
+        .asset-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+        .asset-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .asset-card.maturing-soon {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .asset-card.matured {
+            border-left-color: #ef4444;
+        }
+
+        .asset-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .bank-icon {
+            font-size: 24px;
+        }
+
+        .bank-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: auto;
+        }
+
+        .badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .asset-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .asset-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            color: #6b7280;
+        }
+
+        .detail-value {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .maturity-info {
+            background: #f0fdf4;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .maturity-label {
+            font-size: 12px;
+            color: #065f46;
+            margin-bottom: 4px;
+        }
+
+        .maturity-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .maturity-gain {
+            font-size: 14px;
+            color: #059669;
+        }
+
+        .days-remaining {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #fef3c7;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 16px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .btn-edit, .btn-delete {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .btn-edit:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .btn-delete:hover {
+            background: #fee2e2;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #dc2626;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.active {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .total-value {
+                font-size: 32px;
+            }
+
+            .assets-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>💰 Personal Finance Tracker</h1>
+            <button class="btn-primary" onclick="openModal()">+ Add Asset</button>
+        </header>
+
+        <!-- Portfolio Summary -->
+        <div class="portfolio-summary">
+            <h2>Portfolio Summary</h2>
+            <div class="total-value">₹ 15,45,000</div>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Fixed Deposits (Current)</span>
+                    <span class="summary-value">₹ 12,00,000</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Fixed Deposits (Maturity)</span>
+                    <span class="summary-value green">₹ 13,50,000</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Savings Accounts</span>
+                    <span class="summary-value">₹ 3,45,000</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Maturing Soon</span>
+                    <span class="summary-value orange">3 in 30 days</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <span class="filter-label">Filters:</span>
+            <select>
+                <option>All Assets</option>
+                <option>Fixed Deposits</option>
+                <option>Savings Accounts</option>
+            </select>
+            <select>
+                <option>All Banks</option>
+                <option>HDFC Bank</option>
+                <option>ICICI Bank</option>
+                <option>SBI Bank</option>
+                <option>Axis Bank</option>
+            </select>
+            <button class="btn-secondary">Clear Filters</button>
+        </div>
+
+        <!-- Assets Container -->
+        <div class="assets-container">
+            <!-- Fixed Deposits Section -->
+            <div class="asset-section">
+                <div class="section-header">
+                    <span>🏦 Fixed Deposits (5)</span>
+                    <span class="section-value">₹12,00,000</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th>Bank</th>
+                                <th class="text-right">Principal</th>
+                                <th class="text-right">Interest Rate</th>
+                                <th>Start Date</th>
+                                <th>Maturity Date</th>
+                                <th class="text-right">Days Remaining</th>
+                                <th class="text-right">Maturity Amount</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="row-warning">
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">HDFC Bank</span>
+                                        <span class="badge warning-badge">Maturing Soon</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹5,00,000</td>
+                                <td class="text-right">7.5%</td>
+                                <td>15 Jan 2024</td>
+                                <td>15 Mar 2024</td>
+                                <td class="text-right">
+                                    <span class="days-badge warning">45 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹5,31,250</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm" onclick="showToast('Edit functionality coming soon!', 'success')">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">SBI Bank</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹3,00,000</td>
+                                <td class="text-right">7.0%</td>
+                                <td>01 Dec 2023</td>
+                                <td>01 Jun 2024</td>
+                                <td class="text-right">
+                                    <span class="days-badge">120 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹3,21,000</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm" onclick="showToast('Edit functionality coming soon!', 'success')">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Axis Bank</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹4,00,000</td>
+                                <td class="text-right">7.25%</td>
+                                <td>10 Oct 2023</td>
+                                <td>10 Oct 2024</td>
+                                <td class="text-right">
+                                    <span class="days-badge">240 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹4,29,000</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm" onclick="showToast('Edit functionality coming soon!', 'success')">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Savings Accounts Section -->
+            <div class="asset-section">
+                <div class="section-header">
+                    <span>💰 Savings Accounts (2)</span>
+                    <span class="section-value">₹3,45,000</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th>Bank</th>
+                                <th>Account Number</th>
+                                <th class="text-right">Balance</th>
+                                <th class="text-right">Interest Rate</th>
+                                <th>Last Updated</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">ICICI Bank</span>
+                                        <span class="name-secondary">Savings Account</span>
+                                    </div>
+                                </td>
+                                <td>****1234</td>
+                                <td class="text-right value-cell">₹2,00,000</td>
+                                <td class="text-right">3.5%</td>
+                                <td>10 Feb 2024</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm" onclick="showToast('Edit functionality coming soon!', 'success')">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Axis Bank</span>
+                                        <span class="name-secondary">Savings Account</span>
+                                    </div>
+                                </td>
+                                <td>****5678</td>
+                                <td class="text-right value-cell">₹1,45,000</td>
+                                <td class="text-right">3.0%</td>
+                                <td>12 Feb 2024</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm" onclick="showToast('Edit functionality coming soon!', 'success')">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Asset Modal -->
+    <div class="modal" id="addAssetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Asset</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <form>
+                <div class="form-group">
+                    <label class="form-label">Asset Type <span class="required">*</span></label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" name="assetType" value="fd" checked>
+                            <span>Fixed Deposit</span>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" name="assetType" value="savings">
+                            <span>Savings Account</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bank Name <span class="required">*</span></label>
+                    <select>
+                        <option>Select Bank</option>
+                        <option>HDFC Bank</option>
+                        <option>ICICI Bank</option>
+                        <option>SBI Bank</option>
+                        <option>Axis Bank</option>
+                        <option>Kotak Mahindra Bank</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Principal Amount <span class="required">*</span></label>
+                    <input type="number" placeholder="₹ 5,00,000">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Interest Rate (% p.a.) <span class="required">*</span></label>
+                    <input type="number" step="0.1" placeholder="7.5">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Start Date <span class="required">*</span></label>
+                    <input type="date">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Maturity Date <span class="required">*</span></label>
+                    <input type="date">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Account Number (optional)</label>
+                    <input type="text" placeholder="FD-1234">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="button" class="btn-primary" onclick="addAsset()">Add Asset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('addAssetModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('addAssetModal').classList.remove('active');
+        }
+
+        function addAsset() {
+            showToast('Asset added successfully!', 'success');
+            closeModal();
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.className = `toast ${type} active`;
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        // Close modal on outside click
+        document.getElementById('addAssetModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

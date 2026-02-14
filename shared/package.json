@@ -1,0 +1,20 @@
+{
+  "name": "@personal-finance-tracker/shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and utilities",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18",
+    "fast-check": "^3.15.0"
+  }
+}

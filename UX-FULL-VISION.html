@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker - Full Vision (All Assets)</title>
+    <link rel="stylesheet" href="ux-full-styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-icon">PFT</div>
+                    <div>
+                        <h1>Personal Finance Tracker</h1>
+                        <div class="app-subtitle">Manage your wealth with confidence</div>
+                    </div>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                    <span id="themeText">Dark</span>
+                </button>
+            </div>
+            <button class="btn-primary" id="addAssetBtn" onclick="handleAddAsset()">
+                <span id="addAssetText">+ Add Asset</span>
+            </button>
+        </header>
+
+        <!-- Enhanced Portfolio Summary -->
+        <div class="portfolio-summary">
+            <div class="summary-left">
+                <h2>Portfolio Summary</h2>
+                <div class="total-value">₹ 45,87,500</div>
+                <div class="value-change">↗ +₹2,34,500 (+5.4%) this month</div>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Overall XIRR</span>
+                        <span class="summary-value green">14.2% p.a.</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Realized Gains</span>
+                        <span class="summary-value">₹ 1,25,000</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Unrealized Gains</span>
+                        <span class="summary-value green">₹ 7,50,000</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Upcoming Events</span>
+                        <span class="summary-value orange">9 events</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Assets</span>
+                        <span class="summary-value">23 items</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Monthly SIP</span>
+                        <span class="summary-value">₹ 17,500</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-right">
+                <div class="pie-chart-container">
+                    <svg class="pie-chart" viewBox="0 0 200 200">
+                        <!-- Equities: 40.3% -->
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#3b82f6" stroke-width="40"
+                                stroke-dasharray="201.06 500" stroke-dashoffset="0" transform="rotate(-90 100 100)"
+                                stroke-linecap="round"/>
+                        <!-- Fixed Deposits: 26.2% -->
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#10b981" stroke-width="40"
+                                stroke-dasharray="131.01 500" stroke-dashoffset="-201.06" transform="rotate(-90 100 100)"
+                                stroke-linecap="round"/>
+                        <!-- Mutual Funds: 20.5% -->
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#8b5cf6" stroke-width="40"
+                                stroke-dasharray="102.52 500" stroke-dashoffset="-332.07" transform="rotate(-90 100 100)"
+                                stroke-linecap="round"/>
+                        <!-- Savings: 7.5% -->
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#f59e0b" stroke-width="40"
+                                stroke-dasharray="37.5 500" stroke-dashoffset="-434.59" transform="rotate(-90 100 100)"
+                                stroke-linecap="round"/>
+                        <!-- Gold: 5.5% -->
+                        <circle cx="100" cy="100" r="80" fill="none" stroke="#eab308" stroke-width="40"
+                                stroke-dasharray="27.5 500" stroke-dashoffset="-472.09" transform="rotate(-90 100 100)"
+                                stroke-linecap="round"/>
+                        <!-- Center circle for donut effect -->
+                        <circle cx="100" cy="100" r="60" class="center-circle"/>
+                        <!-- Center text -->
+                        <text x="100" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="#6b7280">Total</text>
+                        <text x="100" y="115" text-anchor="middle" font-size="18" font-weight="700" fill="#111827" id="centerText">₹45.9L</text>
+                    </svg>
+                </div>
+                
+                <div class="pie-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #3b82f6;"></span>
+                        <span class="legend-label">Equities (40.3%)</span>
+                        <span class="legend-value">₹18.5L</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #10b981;"></span>
+                        <span class="legend-label">Fixed Deposits (26.2%)</span>
+                        <span class="legend-value">₹12.0L</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #8b5cf6;"></span>
+                        <span class="legend-label">Mutual Funds (20.5%)</span>
+                        <span class="legend-value">₹9.4L</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #f59e0b;"></span>
+                        <span class="legend-label">Savings (7.5%)</span>
+                        <span class="legend-value">₹3.5L</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #eab308;"></span>
+                        <span class="legend-label">Gold (5.5%)</span>
+                        <span class="legend-value">₹2.5L</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Asset Tabs -->
+        <div class="asset-tabs">
+            <button class="tab-button active" data-tab="all" onclick="switchTab('all')">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">All Assets</span>
+                <span class="tab-count">23</span>
+            </button>
+            <button class="tab-button" data-tab="equities" onclick="switchTab('equities')">
+                <span class="tab-icon">📈</span>
+                <span class="tab-label">Equities</span>
+                <span class="tab-count">8</span>
+            </button>
+            <button class="tab-button" data-tab="mutual-funds" onclick="switchTab('mutual-funds')">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Mutual Funds</span>
+                <span class="tab-count">6</span>
+            </button>
+            <button class="tab-button" data-tab="fixed-deposits" onclick="switchTab('fixed-deposits')">
+                <span class="tab-icon">🏦</span>
+                <span class="tab-label">Fixed Deposits</span>
+                <span class="tab-count">5</span>
+            </button>
+            <button class="tab-button" data-tab="retirement" onclick="switchTab('retirement')">
+                <span class="tab-icon">🏛️</span>
+                <span class="tab-label">Retirement</span>
+                <span class="tab-count">2</span>
+            </button>
+            <button class="tab-button" data-tab="savings" onclick="switchTab('savings')">
+                <span class="tab-icon">💰</span>
+                <span class="tab-label">Savings</span>
+                <span class="tab-count">2</span>
+            </button>
+            <button class="tab-button" data-tab="gold" onclick="switchTab('gold')">
+                <span class="tab-icon">🪙</span>
+                <span class="tab-label">Gold</span>
+                <span class="tab-count">1</span>
+            </button>
+        </div>
+
+        <!-- Assets Tables -->
+        <div class="assets-container" id="assetsContainer">
+            <!-- Equities Section -->
+            <div class="asset-section" id="equities">
+                <div class="section-header">
+                    <span>📈 Equities (8 stocks)</span>
+                    <span class="section-value">₹18,50,000</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('equities', 0)">Name <span class="sort-icon">⇅</span></th>
+                                <th class="sortable" onclick="sortTable('equities', 1)">Ticker</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 2)">Quantity</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 3)">Avg Price</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 4)">Current Price</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 5)">Day Change</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 6)">Total Value</th>
+                                <th class="sortable text-right" onclick="sortTable('equities', 7)">Gain/Loss</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Reliance Industries Ltd</span>
+                                        <span class="name-secondary">NSE • Large Cap</span>
+                                    </div>
+                                </td>
+                                <td><span class="ticker">RELIANCE</span></td>
+                                <td class="text-right">100</td>
+                                <td class="text-right">₹2,350</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹2,450</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right positive">+₹15 (+0.62%)</td>
+                                <td class="text-right value-cell">₹2,45,000</td>
+                                <td class="text-right positive">+₹10,000 (+4.26%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm" title="Buy">Buy</button>
+                                        <button class="btn-action btn-sell-sm" title="Sell">Sell</button>
+                                        <button class="btn-action btn-more" title="More">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Tata Consultancy Services</span>
+                                        <span class="name-secondary">NSE • Large Cap</span>
+                                    </div>
+                                </td>
+                                <td><span class="ticker">TCS</span></td>
+                                <td class="text-right">100</td>
+                                <td class="text-right">₹3,200</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹3,500</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right negative">-₹25 (-0.71%)</td>
+                                <td class="text-right value-cell">₹3,50,000</td>
+                                <td class="text-right positive">+₹30,000 (+9.38%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Buy</button>
+                                        <button class="btn-action btn-sell-sm">Sell</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">HDFC Bank Ltd</span>
+                                        <span class="name-secondary">NSE • Large Cap</span>
+                                    </div>
+                                </td>
+                                <td><span class="ticker">HDFCBANK</span></td>
+                                <td class="text-right">150</td>
+                                <td class="text-right">₹1,450</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹1,520</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right positive">+₹8 (+0.53%)</td>
+                                <td class="text-right value-cell">₹2,28,000</td>
+                                <td class="text-right positive">+₹10,500 (+4.83%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Buy</button>
+                                        <button class="btn-action btn-sell-sm">Sell</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Infosys Ltd</span>
+                                        <span class="name-secondary">NSE • Large Cap</span>
+                                    </div>
+                                </td>
+                                <td><span class="ticker">INFY</span></td>
+                                <td class="text-right">200</td>
+                                <td class="text-right">₹1,400</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹1,485</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right positive">+₹12 (+0.81%)</td>
+                                <td class="text-right value-cell">₹2,97,000</td>
+                                <td class="text-right positive">+₹17,000 (+6.07%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Buy</button>
+                                        <button class="btn-action btn-sell-sm">Sell</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mutual Funds Section -->
+            <div class="asset-section" id="mutual-funds">
+                <div class="section-header">
+                    <span>📊 Mutual Funds (6 funds)</span>
+                    <span class="section-value">₹9,42,500</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('mutual-funds', 0)">Fund Name</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 1)">Units</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 2)">Avg NAV</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 3)">Current NAV</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 4)">SIP Amount</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 5)">Total Value</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 6)">XIRR</th>
+                                <th class="sortable text-right" onclick="sortTable('mutual-funds', 7)">Gain/Loss</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">HDFC Flexi Cap Fund</span>
+                                        <span class="name-secondary">Direct Growth • Equity</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">2,450.50</td>
+                                <td class="text-right">₹72.50</td>
+                                <td class="text-right">₹75.50</td>
+                                <td class="text-right">
+                                    <span class="sip-active">₹5,000/mo</span>
+                                </td>
+                                <td class="text-right value-cell">₹1,85,000</td>
+                                <td class="text-right">12.5%</td>
+                                <td class="text-right positive">+₹7,350 (+4.14%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Invest</button>
+                                        <button class="btn-action btn-sell-sm">Redeem</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Axis Bluechip Fund</span>
+                                        <span class="name-secondary">Direct Growth • Large Cap</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">3,200.75</td>
+                                <td class="text-right">₹42.00</td>
+                                <td class="text-right">₹45.20</td>
+                                <td class="text-right">
+                                    <span class="sip-active">₹3,000/mo</span>
+                                </td>
+                                <td class="text-right value-cell">₹1,44,674</td>
+                                <td class="text-right">14.8%</td>
+                                <td class="text-right positive">+₹10,224 (+7.61%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Invest</button>
+                                        <button class="btn-action btn-sell-sm">Redeem</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Parag Parikh Flexi Cap</span>
+                                        <span class="name-secondary">Direct Growth • Multi Cap</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">1,850.25</td>
+                                <td class="text-right">₹52.00</td>
+                                <td class="text-right">₹56.80</td>
+                                <td class="text-right">—</td>
+                                <td class="text-right value-cell">₹1,05,134</td>
+                                <td class="text-right">16.2%</td>
+                                <td class="text-right positive">+₹8,880 (+9.23%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Invest</button>
+                                        <button class="btn-action btn-sell-sm">Redeem</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Fixed Deposits Section -->
+            <div class="asset-section" id="fixed-deposits">
+                <div class="section-header">
+                    <span>🏦 Fixed Deposits (5 assets)</span>
+                    <span class="section-value">₹12,00,000</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('fixed-deposits', 0)">Bank</th>
+                                <th class="sortable text-right" onclick="sortTable('fixed-deposits', 1)">Principal</th>
+                                <th class="sortable text-right" onclick="sortTable('fixed-deposits', 2)">Interest Rate</th>
+                                <th class="sortable" onclick="sortTable('fixed-deposits', 3)">Start Date</th>
+                                <th class="sortable" onclick="sortTable('fixed-deposits', 4)">Maturity Date</th>
+                                <th class="sortable text-right" onclick="sortTable('fixed-deposits', 5)">Days Remaining</th>
+                                <th class="sortable text-right" onclick="sortTable('fixed-deposits', 6)">Maturity Amount</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="row-warning">
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">HDFC Bank</span>
+                                        <span class="badge warning-badge">Maturing Soon</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹5,00,000</td>
+                                <td class="text-right">7.5%</td>
+                                <td>15 Jan 2023</td>
+                                <td>15 Mar 2024</td>
+                                <td class="text-right">
+                                    <span class="days-badge warning">45 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹5,31,250</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">ICICI Bank</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹3,00,000</td>
+                                <td class="text-right">7.25%</td>
+                                <td>01 Jun 2023</td>
+                                <td>01 Jun 2025</td>
+                                <td class="text-right">
+                                    <span class="days-badge">472 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹3,43,500</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">SBI</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">₹2,00,000</td>
+                                <td class="text-right">7.0%</td>
+                                <td>10 Aug 2023</td>
+                                <td>10 Aug 2026</td>
+                                <td class="text-right">
+                                    <span class="days-badge">907 days</span>
+                                </td>
+                                <td class="text-right value-cell">₹2,42,000</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Retirement Funds Section -->
+            <div class="asset-section" id="retirement">
+                <div class="section-header">
+                    <span>🏛️ Retirement Funds (2 accounts)</span>
+                    <span class="section-value">₹11,25,000</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('retirement', 0)">Type</th>
+                                <th class="sortable" onclick="sortTable('retirement', 1)">Account Number</th>
+                                <th class="sortable text-right" onclick="sortTable('retirement', 2)">Total Contributions</th>
+                                <th class="sortable text-right" onclick="sortTable('retirement', 3)">Current Value</th>
+                                <th class="sortable text-right" onclick="sortTable('retirement', 4)">CAGR</th>
+                                <th class="sortable" onclick="sortTable('retirement', 5)">Allocation</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">National Pension System</span>
+                                        <span class="name-secondary">Tier I</span>
+                                    </div>
+                                </td>
+                                <td>PRAN: ****5678</td>
+                                <td class="text-right">₹4,00,000</td>
+                                <td class="text-right value-cell">₹4,50,000</td>
+                                <td class="text-right">10.2%</td>
+                                <td>
+                                    <div class="allocation-mini">
+                                        <span class="alloc-item">E: 50%</span>
+                                        <span class="alloc-item">C: 30%</span>
+                                        <span class="alloc-item">G: 20%</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Contribute</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Employee Provident Fund</span>
+                                        <span class="name-secondary">Active</span>
+                                    </div>
+                                </td>
+                                <td>UAN: ****1234</td>
+                                <td class="text-right">₹5,90,000</td>
+                                <td class="text-right value-cell">₹6,75,000</td>
+                                <td class="text-right">8.25%</td>
+                                <td>
+                                    <div class="allocation-mini">
+                                        <span class="alloc-item">5y 3m service</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Details</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gold Section -->
+            <div class="asset-section" id="gold">
+                <div class="section-header">
+                    <span>🪙 Gold Holdings</span>
+                    <span class="section-value">₹2,50,000</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('gold', 0)">Type</th>
+                                <th class="sortable text-right" onclick="sortTable('gold', 1)">Weight (g)</th>
+                                <th class="sortable text-right" onclick="sortTable('gold', 2)">Avg Price/g</th>
+                                <th class="sortable text-right" onclick="sortTable('gold', 3)">Current Price/g</th>
+                                <th class="sortable text-right" onclick="sortTable('gold', 4)">Total Value</th>
+                                <th class="sortable text-right" onclick="sortTable('gold', 5)">Gain/Loss</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Physical Gold - Coins</span>
+                                        <span class="name-secondary">2 x 10g coins</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">20g</td>
+                                <td class="text-right">₹5,800</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹6,250</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right value-cell">₹1,25,000</td>
+                                <td class="text-right positive">+₹9,000 (+7.76%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Physical Gold - Jewelry</span>
+                                        <span class="name-secondary">Mixed items</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">10g</td>
+                                <td class="text-right">₹5,800</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹6,250</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right value-cell">₹62,500</td>
+                                <td class="text-right positive">+₹4,500 (+7.76%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">Digital Gold</span>
+                                        <span class="name-secondary">Paytm Gold</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">10g</td>
+                                <td class="text-right">₹6,000</td>
+                                <td class="text-right">
+                                    <span class="live-price">₹6,250</span>
+                                    <span class="badge live-badge">LIVE</span>
+                                </td>
+                                <td class="text-right value-cell">₹62,500</td>
+                                <td class="text-right positive">+₹2,500 (+4.17%)</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-buy-sm">Buy</button>
+                                        <button class="btn-action btn-sell-sm">Sell</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Savings Section -->
+            <div class="asset-section" id="savings">
+                <div class="section-header">
+                    <span>💰 Savings Accounts (2 accounts)</span>
+                    <span class="section-value">₹3,45,000</span>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('savings', 0)">Bank</th>
+                                <th class="sortable" onclick="sortTable('savings', 1)">Account Number</th>
+                                <th class="sortable text-right" onclick="sortTable('savings', 2)">Balance</th>
+                                <th class="sortable text-right" onclick="sortTable('savings', 3)">Interest Rate</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">ICICI Bank</span>
+                                        <span class="name-secondary">Savings Account</span>
+                                    </div>
+                                </td>
+                                <td>****1234</td>
+                                <td class="text-right value-cell">₹2,00,000</td>
+                                <td class="text-right">3.5%</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="asset-name">
+                                        <span class="name-primary">HDFC Bank</span>
+                                        <span class="name-secondary">Savings Account</span>
+                                    </div>
+                                </td>
+                                <td>****5678</td>
+                                <td class="text-right value-cell">₹1,45,000</td>
+                                <td class="text-right">3.0%</td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-edit-sm">Edit</button>
+                                        <button class="btn-action btn-more">⋯</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Asset Modal -->
+    <div class="modal" id="addAssetModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Asset</h2>
+                <button class="btn-close" onclick="closeAddModal()">×</button>
+            </div>
+            
+            <div class="asset-type-selector">
+                <div class="asset-type-card" onclick="selectAssetType('fd')">
+                    <div class="asset-type-icon">🏦</div>
+                    <div class="asset-type-name">Fixed Deposit</div>
+                </div>
+                <div class="asset-type-card" onclick="selectAssetType('savings')">
+                    <div class="asset-type-icon">💰</div>
+                    <div class="asset-type-name">Savings Account</div>
+                </div>
+                <div class="asset-type-card" onclick="selectAssetType('equity')">
+                    <div class="asset-type-icon">📈</div>
+                    <div class="asset-type-name">Equity</div>
+                </div>
+                <div class="asset-type-card" onclick="selectAssetType('mf')">
+                    <div class="asset-type-icon">📊</div>
+                    <div class="asset-type-name">Mutual Fund</div>
+                </div>
+                <div class="asset-type-card" onclick="selectAssetType('nps')">
+                    <div class="asset-type-icon">🏛️</div>
+                    <div class="asset-type-name">NPS</div>
+                </div>
+                <div class="asset-type-card" onclick="selectAssetType('gold')">
+                    <div class="asset-type-icon">🪙</div>
+                    <div class="asset-type-name">Gold</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="ux-full-script.js"></script>
+</body>
+</html>
