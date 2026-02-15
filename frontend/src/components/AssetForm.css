@@ -219,3 +219,39 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Current Price Display */
+.current-price-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.current-price-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  opacity: 0.9;
+}
+
+.current-price-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+}
+
+.fetching-indicator {
+  font-size: 0.75rem;
+  color: white;
+  opacity: 0.8;
+  font-style: italic;
+  margin-left: auto;
+}
+
+[data-theme="dark"] .current-price-display {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}

@@ -15,6 +15,7 @@ import {
   searchStockSymbols,
   refreshMutualFundNavs,
   searchMutualFundSchemes,
+  getMutualFundNav,
 } from '../controllers/assetsController';
 
 const router = Router();
@@ -26,6 +27,7 @@ router.get('/equities/search', searchStockSymbols);
 // Mutual fund-specific endpoints
 router.get('/mutualfunds/nav', refreshMutualFundNavs);
 router.get('/mutualfunds/search', searchMutualFundSchemes);
+router.get('/mutualfunds/:schemeCode/nav', getMutualFundNav);
 
 // Stats endpoint must come before :id to avoid route conflicts
 router.get('/stats', getAssetStats);

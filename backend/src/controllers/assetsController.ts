@@ -805,3 +805,47 @@ export async function searchMutualFundSchemes(req: Request, res: Response): Prom
     });
   }
 }
+
+/**
+ * GET /api/mutualfunds/:schemeCode/nav
+ * Get current NAV for a specific mutual fund scheme
+ */
+export async function getMutualFundNav(req: Request, res: Response): Promise<void> {
+  try {
+    const { schemeCode } = req.params;
+
+    if (!schemeCode) {
+      res.status(400).json({
+        success: false,
+        error: 'Scheme code is required',
+      });
+      return;
+    }
+
+    logger.info('Fetching NAV for scheme', { schemeCode });
+
+    const navData = await getMFQuote(schemeCode);
+
+    if (!navData) {
+      res.status(404).json({
+        success: false,
+        error: 'Mutual fund not found or NAV unavailable',
+      });
+      return;
+    }
+
+    logger.info('NAV fetched successfully', { schemeCode, nav: navData.nav });
+
+    res.json({
+      success: true,
+      data: navData,
+    });
+  } catch (error: any) {
+    logger.error('Error fetching mutual fund NAV', { schemeCode: req.params.schemeCode }, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch mutual fund NAV',
+    });
+  }
+}

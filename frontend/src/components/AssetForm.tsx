@@ -153,6 +153,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({
     }
     return '';
   });
+  const [currentNav, setCurrentNav] = useState<number | null>(null);
+  const [isFetchingNav, setIsFetchingNav] = useState(false);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -178,6 +180,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({
       setFundHouse('');
       setUnits('');
       setAverageNav('');
+      setCurrentNav(null);
       setErrors({});
     }
   }, [assetType, isEditMode]);
@@ -191,13 +194,31 @@ export const AssetForm: React.FC<AssetFormProps> = ({
   };
 
   // Handle mutual fund selection from autocomplete
-  const handleMFSelect = (code: string, name: string) => {
+  const handleMFSelect = async (code: string, name: string) => {
     setSchemeCode(code);
     setSchemeName(name);
     // Extract fund house from scheme name (usually first part before "-")
     const parts = name.split('-');
     if (parts.length > 0) {
       setFundHouse(parts[0].trim());
+    }
+    
+    // Fetch current NAV
+    setIsFetchingNav(true);
+    try {
+      const response = await fetch(`http://localhost:3000/api/assets/mutualfunds/${code}/nav`);
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.nav) {
+        setCurrentNav(data.data.nav);
+      } else {
+        setCurrentNav(null);
+      }
+    } catch (error) {
+      console.error('Error fetching NAV:', error);
+      setCurrentNav(null);
+    } finally {
+      setIsFetchingNav(false);
     }
   };
   
@@ -679,6 +700,17 @@ export const AssetForm: React.FC<AssetFormProps> = ({
             />
             {errors.schemeName && <span className="error-message">{errors.schemeName}</span>}
           </div>
+          
+          {/* Current NAV Display */}
+          {currentNav !== null && (
+            <div className="form-group">
+              <div className="current-price-display">
+                <span className="current-price-label">Current NAV:</span>
+                <span className="current-price-value">₹{currentNav.toFixed(4)}</span>
+                {isFetchingNav && <span className="fetching-indicator">Updating...</span>}
+              </div>
+            </div>
+          )}
           
           <div className="form-row">
             <div className="form-group">
