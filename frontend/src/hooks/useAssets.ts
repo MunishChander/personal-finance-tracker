@@ -10,6 +10,7 @@ import {
   createAsset,
   updateAsset as updateAssetApi,
   deleteAsset as deleteAssetApi,
+  refreshEquityPrices as refreshEquityPricesApi,
   ApiError,
 } from '../services/api';
 
@@ -21,6 +22,7 @@ export interface UseAssetsReturn {
   updateAsset: (id: string, asset: AssetInput) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
   refreshAssets: () => Promise<void>;
+  refreshEquityPrices: () => Promise<void>;
 }
 
 /**
@@ -117,6 +119,33 @@ export function useAssets(): UseAssetsReturn {
     }
   }, []);
 
+  /**
+   * Refresh equity prices from Yahoo Finance
+   */
+  const refreshEquityPrices = useCallback(async (): Promise<void> => {
+    try {
+      setError(null);
+      const updatedEquities = await refreshEquityPricesApi();
+      
+      // Update only equity assets with new prices
+      setAssets((prevAssets) =>
+        prevAssets.map((asset) => {
+          if (asset.type === 'equity') {
+            const updatedEquity = updatedEquities.find((eq) => eq.id === asset.id);
+            return updatedEquity || asset;
+          }
+          return asset;
+        })
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof ApiError ? err.message : 'Failed to refresh equity prices';
+      setError(errorMessage);
+      console.error('Error refreshing equity prices:', err);
+      throw err; // Re-throw to allow caller to handle
+    }
+  }, []);
+
   return {
     assets,
     loading,
@@ -125,5 +154,6 @@ export function useAssets(): UseAssetsReturn {
     updateAsset,
     deleteAsset,
     refreshAssets,
+    refreshEquityPrices,
   };
 }

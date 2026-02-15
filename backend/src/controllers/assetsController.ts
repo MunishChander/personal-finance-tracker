@@ -17,8 +17,10 @@ import {
   AssetInput,
   FixedDeposit,
   SavingsAccount,
+  Equity,
   DashboardStats,
 } from '@personal-finance-tracker/shared';
+import { getStockQuote, getMultipleStockQuotes } from '../services/yahooFinanceService.js';
 
 /**
  * Helper function to convert database row to Asset object
@@ -56,7 +58,7 @@ function rowToAsset(row: any): Asset {
       daysToMaturity,
       isMatured: matured,
     } as FixedDeposit;
-  } else {
+  } else if (row.type === 'savings-account') {
     return {
       ...base,
       type: 'savings-account',
@@ -64,6 +66,30 @@ function rowToAsset(row: any): Asset {
       currentBalance: parseFloat(row.current_balance),
       interestRate: row.interest_rate ? parseFloat(row.interest_rate) : undefined,
     } as SavingsAccount;
+  } else {
+    // Equity
+    const quantity = parseFloat(row.quantity);
+    const averagePrice = parseFloat(row.average_price);
+    const totalInvestment = quantity * averagePrice;
+    const currentPrice = row.current_price ? parseFloat(row.current_price) : undefined;
+    const currentValue = currentPrice ? quantity * currentPrice : undefined;
+    const gainLoss = currentValue ? currentValue - totalInvestment : undefined;
+    const gainLossPercentage = gainLoss ? (gainLoss / totalInvestment) * 100 : undefined;
+
+    return {
+      ...base,
+      type: 'equity',
+      symbol: row.symbol,
+      companyName: row.company_name,
+      exchange: row.exchange,
+      quantity,
+      averagePrice,
+      currentPrice,
+      totalInvestment,
+      currentValue,
+      gainLoss,
+      gainLossPercentage,
+    } as Equity;
   }
 }
 
@@ -76,10 +102,19 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
     const assetInput: AssetInput = req.body;
 
     // Validate based on asset type
-    const validationResult =
-      assetInput.type === 'fixed-deposit'
-        ? validateFixedDeposit(assetInput)
-        : validateSavingsAccount(assetInput);
+    let validationResult;
+    if (assetInput.type === 'fixed-deposit') {
+      validationResult = validateFixedDeposit(assetInput);
+    } else if (assetInput.type === 'savings-account') {
+      validationResult = validateSavingsAccount(assetInput);
+    } else {
+      // Basic equity validation
+      const equity = assetInput as Partial<Equity>;
+      validationResult = {
+        isValid: !!(equity.symbol && equity.companyName && equity.exchange && equity.quantity && equity.averagePrice),
+        errors: []
+      };
+    }
 
     if (!validationResult.isValid) {
       logger.warn('Asset validation failed', { 
@@ -114,7 +149,7 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           fd.maturityDate,
         ]
       );
-    } else {
+    } else if (assetInput.type === 'savings-account') {
       const sa = assetInput as Partial<SavingsAccount>;
       result = await pool.query(
         `INSERT INTO assets (
@@ -127,6 +162,24 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           sa.accountNumber,
           sa.currentBalance,
           sa.interestRate || null,
+        ]
+      );
+    } else {
+      // Equity
+      const equity = assetInput as Partial<Equity>;
+      result = await pool.query(
+        `INSERT INTO assets (
+          type, bank_name, symbol, company_name, exchange, quantity, average_price
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *`,
+        [
+          'equity',
+          equity.bankName, // Broker name
+          equity.symbol,
+          equity.companyName,
+          equity.exchange,
+          equity.quantity,
+          equity.averagePrice,
         ]
       );
     }
@@ -263,10 +316,19 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
     }
 
     // Validate based on asset type
-    const validationResult =
-      assetInput.type === 'fixed-deposit'
-        ? validateFixedDeposit(assetInput)
-        : validateSavingsAccount(assetInput);
+    let validationResult;
+    if (assetInput.type === 'fixed-deposit') {
+      validationResult = validateFixedDeposit(assetInput);
+    } else if (assetInput.type === 'savings-account') {
+      validationResult = validateSavingsAccount(assetInput);
+    } else {
+      // Basic equity validation
+      const equity = assetInput as Partial<Equity>;
+      validationResult = {
+        isValid: !!(equity.symbol && equity.companyName && equity.exchange && equity.quantity && equity.averagePrice),
+        errors: []
+      };
+    }
 
     if (!validationResult.isValid) {
       logger.warn('Asset validation failed on update', { 
@@ -291,7 +353,8 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
           type = $1, bank_name = $2, account_number = $3,
           principal_amount = $4, interest_rate = $5,
           start_date = $6, maturity_date = $7,
-          current_balance = NULL,
+          current_balance = NULL, symbol = NULL, company_name = NULL, 
+          exchange = NULL, quantity = NULL, average_price = NULL,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $8
         RETURNING *`,
@@ -306,13 +369,15 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
           id,
         ]
       );
-    } else {
+    } else if (assetInput.type === 'savings-account') {
       const sa = assetInput as Partial<SavingsAccount>;
       result = await pool.query(
         `UPDATE assets SET
           type = $1, bank_name = $2, account_number = $3,
           current_balance = $4, interest_rate = $5,
           principal_amount = NULL, start_date = NULL, maturity_date = NULL,
+          symbol = NULL, company_name = NULL, exchange = NULL, 
+          quantity = NULL, average_price = NULL,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $6
         RETURNING *`,
@@ -322,6 +387,30 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
           sa.accountNumber,
           sa.currentBalance,
           sa.interestRate || null,
+          id,
+        ]
+      );
+    } else {
+      // Equity
+      const equity = assetInput as Partial<Equity>;
+      result = await pool.query(
+        `UPDATE assets SET
+          type = $1, bank_name = $2, symbol = $3,
+          company_name = $4, exchange = $5, quantity = $6,
+          average_price = $7,
+          account_number = NULL, principal_amount = NULL, interest_rate = NULL,
+          start_date = NULL, maturity_date = NULL, current_balance = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $8
+        RETURNING *`,
+        [
+          'equity',
+          equity.bankName, // Broker name
+          equity.symbol,
+          equity.companyName,
+          equity.exchange,
+          equity.quantity,
+          equity.averagePrice,
           id,
         ]
       );
@@ -470,6 +559,102 @@ export async function getAssetStats(req: Request, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics',
+    });
+  }
+}
+
+/**
+ * GET /api/equities/prices
+ * Fetch live prices for all equities
+ */
+export async function refreshEquityPrices(req: Request, res: Response): Promise<void> {
+  try {
+    // Get all equities from database
+    const result = await pool.query(
+      "SELECT * FROM assets WHERE type = 'equity'"
+    );
+
+    if (result.rows.length === 0) {
+      res.json({
+        success: true,
+        data: [],
+      });
+      return;
+    }
+
+    // Extract symbols
+    const symbols = result.rows.map(row => row.symbol);
+
+    // Fetch live quotes
+    const quotes = await getMultipleStockQuotes(symbols);
+
+    // Update database with current prices
+    const updatePromises = result.rows.map(async (row) => {
+      const quote = quotes.get(row.symbol);
+      if (quote) {
+        await pool.query(
+          'UPDATE assets SET current_price = $1 WHERE id = $2',
+          [quote.price, row.id]
+        );
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    // Fetch updated assets
+    const updatedResult = await pool.query(
+      "SELECT * FROM assets WHERE type = 'equity'"
+    );
+
+    const equities = updatedResult.rows.map(rowToAsset);
+
+    logger.info('Equity prices refreshed', { count: equities.length });
+
+    res.json({
+      success: true,
+      data: equities,
+    });
+  } catch (error: any) {
+    logger.error('Error refreshing equity prices', {}, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to refresh equity prices',
+    });
+  }
+}
+
+/**
+ * GET /api/equities/search?q=query
+ * Search for stock symbols
+ */
+export async function searchStockSymbols(req: Request, res: Response): Promise<void> {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'Query parameter "q" is required',
+      });
+      return;
+    }
+
+    const { searchStocks } = await import('../services/yahooFinanceService.js');
+    const results = await searchStocks(q);
+
+    logger.info('Stock search completed', { query: q, count: results.length });
+
+    res.json({
+      success: true,
+      data: results,
+    });
+  } catch (error: any) {
+    logger.error('Error searching stocks', { query: req.query.q }, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search stocks',
     });
   }
 }

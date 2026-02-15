@@ -1,0 +1,146 @@
+/* Stock Search Container */
+.stock-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.stock-search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.stock-search-input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.stock-search-spinner {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-small {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dropdown */
+.stock-search-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  max-height: 20rem;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.stock-search-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.stock-search-item:last-child {
+  border-bottom: none;
+}
+
+.stock-search-item:hover,
+.stock-search-item.selected {
+  background: var(--hover-bg);
+}
+
+.stock-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.stock-item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  flex: 1;
+  margin-right: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-item-symbol {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-family: 'Courier New', monospace;
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.stock-item-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.stock-item-exchange {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.stock-item-type {
+  color: var(--text-tertiary);
+}
+
+.stock-search-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .stock-search-dropdown {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .stock-search-dropdown {
+    max-height: 15rem;
+  }
+
+  .stock-search-item {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .stock-item-name {
+    font-size: 0.875rem;
+  }
+
+  .stock-item-symbol {
+    font-size: 0.75rem;
+  }
+}

@@ -11,12 +11,18 @@ import {
   updateAsset,
   deleteAsset,
   getAssetStats,
+  refreshEquityPrices,
+  searchStockSymbols,
 } from '../controllers/assetsController';
 
 const router = Router();
 
 // Stats endpoint must come before :id to avoid route conflicts
 router.get('/stats', getAssetStats);
+
+// Equity-specific endpoints
+router.get('/equities/prices', refreshEquityPrices);
+router.get('/equities/search', searchStockSymbols);
 
 // CRUD endpoints
 router.post('/', createAsset);

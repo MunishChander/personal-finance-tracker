@@ -204,6 +204,52 @@ export async function getStats(): Promise<DashboardStats> {
 }
 
 /**
+ * GET /api/assets/equities/prices
+ * Refresh live prices for all equity holdings
+ */
+export async function refreshEquityPrices(): Promise<Asset[]> {
+  try {
+    const response = await apiClient.get<ApiResponse<Asset[]>>(
+      '/assets/equities/prices'
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError('Failed to refresh equity prices');
+    }
+
+    return response.data.data.map(transformAssetDates);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to refresh equity prices', undefined, error);
+  }
+}
+
+/**
+ * GET /api/assets/equities/search?q=query
+ * Search for stock symbols
+ */
+export async function searchStocks(query: string): Promise<any[]> {
+  try {
+    const response = await apiClient.get<ApiResponse<any[]>>(
+      `/assets/equities/search?q=${encodeURIComponent(query)}`
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError('Failed to search stocks');
+    }
+
+    return response.data.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to search stocks', undefined, error);
+  }
+}
+
+/**
  * Export the configured axios instance for advanced usage
  */
 export { apiClient };

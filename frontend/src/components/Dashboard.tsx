@@ -10,15 +10,19 @@ interface DashboardStats {
   totalPortfolioValue: number;
   totalFixedDeposits: number;
   totalSavingsAccounts: number;
+  totalEquities: number;
   fixedDepositCount: number;
   savingsAccountCount: number;
+  equityCount: number;
 }
 
 const calculateStats = (assets: Asset[]): DashboardStats => {
   let totalFixedDeposits = 0;
   let totalSavingsAccounts = 0;
+  let totalEquities = 0;
   let fixedDepositCount = 0;
   let savingsAccountCount = 0;
+  let equityCount = 0;
 
   assets.forEach((asset) => {
     if (asset.type === 'fixed-deposit') {
@@ -28,17 +32,23 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
     } else if (asset.type === 'savings-account') {
       totalSavingsAccounts += asset.currentBalance;
       savingsAccountCount++;
+    } else if (asset.type === 'equity') {
+      const equity = asset as any;
+      totalEquities += equity.currentValue || equity.totalInvestment;
+      equityCount++;
     }
   });
 
-  const totalPortfolioValue = totalFixedDeposits + totalSavingsAccounts;
+  const totalPortfolioValue = totalFixedDeposits + totalSavingsAccounts + totalEquities;
 
   return {
     totalPortfolioValue,
     totalFixedDeposits,
     totalSavingsAccounts,
+    totalEquities,
     fixedDepositCount,
     savingsAccountCount,
+    equityCount,
   };
 };
 
@@ -71,12 +81,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets }) => {
   const savingsPercentage = stats.totalPortfolioValue > 0 
     ? (stats.totalSavingsAccounts / stats.totalPortfolioValue) * 100 
     : 0;
+  const equitiesPercentage = stats.totalPortfolioValue > 0 
+    ? (stats.totalEquities / stats.totalPortfolioValue) * 100 
+    : 0;
 
   // Calculate pie chart segments (SVG circle with circumference 502.65)
   const circumference = 502.65;
   const fdDashArray = `${(fdPercentage / 100) * circumference} ${circumference}`;
   const savingsDashArray = `${(savingsPercentage / 100) * circumference} ${circumference}`;
+  const equitiesDashArray = `${(equitiesPercentage / 100) * circumference} ${circumference}`;
   const savingsDashOffset = -((fdPercentage / 100) * circumference);
+  const equitiesDashOffset = -(((fdPercentage + savingsPercentage) / 100) * circumference);
 
   return (
     <div className="portfolio-summary">
@@ -94,12 +109,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets }) => {
             <span className="summary-value">{formatCompact(stats.totalSavingsAccounts)}</span>
           </div>
           <div className="summary-item">
-            <span className="summary-label">Total Assets</span>
-            <span className="summary-value">{assets.length} items</span>
+            <span className="summary-label">Equities</span>
+            <span className="summary-value">{formatCompact(stats.totalEquities)}</span>
           </div>
           <div className="summary-item">
-            <span className="summary-label">FD Count</span>
-            <span className="summary-value">{stats.fixedDepositCount}</span>
+            <span className="summary-label">Total Assets</span>
+            <span className="summary-value">{assets.length} items</span>
           </div>
         </div>
       </div>
@@ -137,6 +152,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets }) => {
                 strokeLinecap="round"
               />
             )}
+            {/* Equities segment */}
+            {equitiesPercentage > 0 && (
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                fill="none"
+                stroke="#8b5cf6"
+                strokeWidth="40"
+                strokeDasharray={equitiesDashArray}
+                strokeDashoffset={equitiesDashOffset}
+                transform="rotate(-90 100 100)"
+                strokeLinecap="round"
+              />
+            )}
             {/* Center circle for donut effect */}
             <circle cx="100" cy="100" r="60" className="center-circle" />
             {/* Center text */}
@@ -159,6 +189,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets }) => {
             <span className="legend-color" style={{ background: '#f59e0b' }}></span>
             <span className="legend-label">Savings ({savingsPercentage.toFixed(1)}%)</span>
             <span className="legend-value">{formatCompact(stats.totalSavingsAccounts)}</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-color" style={{ background: '#8b5cf6' }}></span>
+            <span className="legend-label">Equities ({equitiesPercentage.toFixed(1)}%)</span>
+            <span className="legend-value">{formatCompact(stats.totalEquities)}</span>
           </div>
         </div>
       </div>

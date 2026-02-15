@@ -7,7 +7,7 @@ import { AssetForm } from './components/AssetForm';
 import './App.css';
 
 function App() {
-  const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets } = useAssets();
+  const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets, refreshEquityPrices } = useAssets();
   
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -25,6 +25,16 @@ function App() {
   
   // Track if database is unavailable
   const isDatabaseUnavailable = error?.includes('Database unavailable') || error?.includes('Unable to reach');
+
+  // Auto-refresh equity prices on load
+  useEffect(() => {
+    const hasEquities = assets.some(asset => asset.type === 'equity');
+    if (hasEquities && !loading) {
+      refreshEquityPrices().catch(err => {
+        console.error('Failed to auto-refresh equity prices:', err);
+      });
+    }
+  }, [assets.length]); // Only run when assets are first loaded
 
   // Apply theme
   useEffect(() => {
@@ -85,6 +95,17 @@ function App() {
       showToast('Asset deleted successfully!', 'success');
     } catch (err) {
       showToast('Failed to delete asset. Please try again.', 'error');
+    }
+  };
+
+  // Handle refresh equity prices
+  const handleRefreshEquityPrices = async () => {
+    try {
+      await refreshEquityPrices();
+      showToast('Equity prices refreshed successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to refresh equity prices. Please try again.', 'error');
+      throw err;
     }
   };
 
@@ -163,6 +184,7 @@ function App() {
                 const asset = assets.find((a) => a.id === assetId);
                 if (asset) setDeleteConfirmAsset(asset);
               }}
+              onRefreshPrices={handleRefreshEquityPrices}
             />
           </>
         )}
@@ -199,7 +221,13 @@ function App() {
           <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
             <h2>Confirm Delete</h2>
             <p>
-              Are you sure you want to delete this {deleteConfirmAsset.type === 'fixed-deposit' ? 'Fixed Deposit' : 'Savings Account'} from <strong>{deleteConfirmAsset.bankName}</strong>?
+              Are you sure you want to delete this{' '}
+              {deleteConfirmAsset.type === 'fixed-deposit' 
+                ? 'Fixed Deposit' 
+                : deleteConfirmAsset.type === 'savings-account'
+                ? 'Savings Account'
+                : 'Equity'}{' '}
+              from <strong>{deleteConfirmAsset.bankName}</strong>?
             </p>
             <p className="warning-text">This action cannot be undone.</p>
             <div className="modal-actions">
