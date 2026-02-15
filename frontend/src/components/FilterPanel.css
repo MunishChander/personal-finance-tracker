@@ -1,18 +1,24 @@
 /* FilterPanel Component Styles */
 
 .filter-panel {
-  background: white;
-  border-radius: 8px;
+  background: var(--card-bg);
+  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  transition: box-shadow 0.3s ease;
+}
+
+.filter-panel:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .filter-title {
   margin: 0 0 1rem 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .filter-controls {
@@ -32,27 +38,29 @@
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .filter-input {
   width: 100%;
   padding: 0.625rem 0.75rem;
   font-size: 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
   box-sizing: border-box;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .filter-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-shadow);
 }
 
 .filter-input::placeholder {
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 /* Select dropdown styling */
@@ -72,19 +80,20 @@ select.filter-input {
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background-color: white;
-  color: #374151;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background: var(--card-bg);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, transform 0.1s;
+  transition: all 0.2s ease;
   min-height: 42px;
 }
 
 .btn-clear:hover:not(:disabled) {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--hover-bg);
+  border-color: var(--primary-color);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-clear:active:not(:disabled) {

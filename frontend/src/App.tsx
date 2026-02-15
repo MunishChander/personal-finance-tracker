@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Asset, AssetInput } from '@personal-finance-tracker/shared';
 import { useAssets } from './hooks/useAssets';
 import { useFilters } from './hooks/useFilters';
@@ -12,6 +12,12 @@ function App() {
   const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets } = useAssets();
   const { filters, filteredAssets, setAssetTypeFilter, setBankFilter } = useFilters(assets);
   
+  // Theme state
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved as 'light' | 'dark') || 'light';
+  });
+  
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
@@ -22,6 +28,17 @@ function App() {
   
   // Track if database is unavailable
   const isDatabaseUnavailable = error?.includes('Database unavailable') || error?.includes('Unable to reach');
+
+  // Apply theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // Toggle theme
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -77,8 +94,15 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Personal Finance Tracker</h1>
-        <p>Manage your Fixed Deposits and Savings Accounts</p>
+        <div className="header-content">
+          <div className="header-text">
+            <h1>Personal Finance Tracker</h1>
+            <p>Manage your Fixed Deposits and Savings Accounts</p>
+          </div>
+          <button className="theme-toggle" onClick={toggleTheme}>
+            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
+        </div>
       </header>
       
       <main className="app-main">
