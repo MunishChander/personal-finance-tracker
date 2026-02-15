@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { pool } from '../utils/db';
+import { logger } from '../utils/logger';
 import {
   validateFixedDeposit,
   validateSavingsAccount,
@@ -81,6 +82,10 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
         : validateSavingsAccount(assetInput);
 
     if (!validationResult.isValid) {
+      logger.warn('Asset validation failed', { 
+        type: assetInput.type,
+        errors: validationResult.errors 
+      });
       res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -127,13 +132,27 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
     }
 
     const createdAsset = rowToAsset(result.rows[0]);
+    logger.info('Asset created successfully', { 
+      assetId: createdAsset.id, 
+      type: createdAsset.type 
+    });
 
     res.status(201).json({
       success: true,
       data: createdAsset,
     });
-  } catch (error) {
-    console.error('Error creating asset:', error);
+  } catch (error: any) {
+    logger.error('Error creating asset', { body: req.body }, error);
+    
+    // Check for database connection errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to create asset',
@@ -152,13 +171,23 @@ export async function getAllAssets(req: Request, res: Response): Promise<void> {
     );
 
     const assets = result.rows.map(rowToAsset);
+    logger.debug('Assets fetched successfully', { count: assets.length });
 
     res.json({
       success: true,
       data: assets,
     });
-  } catch (error) {
-    console.error('Error fetching assets:', error);
+  } catch (error: any) {
+    logger.error('Error fetching assets', {}, error);
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to fetch assets',
@@ -177,6 +206,7 @@ export async function getAssetById(req: Request, res: Response): Promise<void> {
     const result = await pool.query('SELECT * FROM assets WHERE id = $1', [id]);
 
     if (result.rows.length === 0) {
+      logger.warn('Asset not found', { assetId: id });
       res.status(404).json({
         success: false,
         error: 'Asset not found',
@@ -190,8 +220,17 @@ export async function getAssetById(req: Request, res: Response): Promise<void> {
       success: true,
       data: asset,
     });
-  } catch (error) {
-    console.error('Error fetching asset:', error);
+  } catch (error: any) {
+    logger.error('Error fetching asset', { assetId: req.params.id }, error);
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to fetch asset',
@@ -215,6 +254,7 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
     );
 
     if (existingResult.rows.length === 0) {
+      logger.warn('Asset not found for update', { assetId: id });
       res.status(404).json({
         success: false,
         error: 'Asset not found',
@@ -229,6 +269,11 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
         : validateSavingsAccount(assetInput);
 
     if (!validationResult.isValid) {
+      logger.warn('Asset validation failed on update', { 
+        assetId: id,
+        type: assetInput.type,
+        errors: validationResult.errors 
+      });
       res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -283,13 +328,29 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
     }
 
     const updatedAsset = rowToAsset(result.rows[0]);
+    logger.info('Asset updated successfully', { 
+      assetId: updatedAsset.id, 
+      type: updatedAsset.type 
+    });
 
     res.json({
       success: true,
       data: updatedAsset,
     });
-  } catch (error) {
-    console.error('Error updating asset:', error);
+  } catch (error: any) {
+    logger.error('Error updating asset', { 
+      assetId: req.params.id, 
+      body: req.body 
+    }, error);
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to update asset',
@@ -311,6 +372,7 @@ export async function deleteAsset(req: Request, res: Response): Promise<void> {
     );
 
     if (result.rows.length === 0) {
+      logger.warn('Asset not found for deletion', { assetId: id });
       res.status(404).json({
         success: false,
         error: 'Asset not found',
@@ -318,12 +380,23 @@ export async function deleteAsset(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    logger.info('Asset deleted successfully', { assetId: result.rows[0].id });
+
     res.json({
       success: true,
       data: { id: result.rows[0].id },
     });
-  } catch (error) {
-    console.error('Error deleting asset:', error);
+  } catch (error: any) {
+    logger.error('Error deleting asset', { assetId: req.params.id }, error);
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to delete asset',
@@ -377,12 +450,23 @@ export async function getAssetStats(req: Request, res: Response): Promise<void> 
       maturingSoon,
     };
 
+    logger.debug('Stats calculated successfully', stats);
+
     res.json({
       success: true,
       data: stats,
     });
-  } catch (error) {
-    console.error('Error fetching stats:', error);
+  } catch (error: any) {
+    logger.error('Error fetching stats', {}, error);
+    
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      res.status(503).json({
+        success: false,
+        error: 'Database connection failed. Please try again later.',
+      });
+      return;
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics',
