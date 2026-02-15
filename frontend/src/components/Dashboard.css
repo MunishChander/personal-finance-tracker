@@ -1,6 +1,6 @@
 /* Portfolio Summary - Matching UX Vision */
 .portfolio-summary {
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+  background: var(--card-bg);
   padding: 1.5rem;
   border-radius: 16px;
   margin-bottom: 2rem;
