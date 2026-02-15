@@ -17,12 +17,12 @@ import {
 
 const router = Router();
 
-// Stats endpoint must come before :id to avoid route conflicts
-router.get('/stats', getAssetStats);
-
-// Equity-specific endpoints
+// Equity-specific endpoints (must come before :id route)
 router.get('/equities/prices', refreshEquityPrices);
 router.get('/equities/search', searchStockSymbols);
+
+// Stats endpoint must come before :id to avoid route conflicts
+router.get('/stats', getAssetStats);
 
 // CRUD endpoints
 router.post('/', createAsset);
