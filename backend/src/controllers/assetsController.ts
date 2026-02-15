@@ -198,41 +198,123 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
         ]
       );
     } else if (assetInput.type === 'equity') {
-      // Equity
+      // Equity - Check for existing holding with same symbol and broker
       const equity = assetInput as Partial<Equity>;
-      result = await pool.query(
-        `INSERT INTO assets (
-          type, bank_name, symbol, company_name, exchange, quantity, average_price
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`,
-        [
-          'equity',
-          equity.bankName, // Broker name
-          equity.symbol,
-          equity.companyName,
-          equity.exchange,
-          equity.quantity,
-          equity.averagePrice,
-        ]
+      
+      const existingEquity = await pool.query(
+        `SELECT * FROM assets WHERE type = 'equity' AND symbol = $1 AND bank_name = $2`,
+        [equity.symbol, equity.bankName]
       );
+      
+      if (existingEquity.rows.length > 0) {
+        // Aggregate with existing holding
+        const existing = existingEquity.rows[0];
+        const existingQty = parseFloat(existing.quantity);
+        const existingAvgPrice = parseFloat(existing.average_price);
+        const newQty = equity.quantity!;
+        const newAvgPrice = equity.averagePrice!;
+        
+        // Calculate new average price: (oldQty * oldAvg + newQty * newAvg) / (oldQty + newQty)
+        const totalQty = existingQty + newQty;
+        const weightedAvgPrice = ((existingQty * existingAvgPrice) + (newQty * newAvgPrice)) / totalQty;
+        
+        result = await pool.query(
+          `UPDATE assets SET
+            quantity = $1,
+            average_price = $2,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $3
+          RETURNING *`,
+          [totalQty, weightedAvgPrice, existing.id]
+        );
+        
+        logger.info('Equity holding aggregated', {
+          symbol: equity.symbol,
+          broker: equity.bankName,
+          oldQty: existingQty,
+          newQty,
+          totalQty,
+          oldAvgPrice: existingAvgPrice,
+          newAvgPrice,
+          weightedAvgPrice
+        });
+      } else {
+        // Create new holding
+        result = await pool.query(
+          `INSERT INTO assets (
+            type, bank_name, symbol, company_name, exchange, quantity, average_price
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING *`,
+          [
+            'equity',
+            equity.bankName, // Broker name
+            equity.symbol,
+            equity.companyName,
+            equity.exchange,
+            equity.quantity,
+            equity.averagePrice,
+          ]
+        );
+      }
     } else {
-      // Mutual Fund
+      // Mutual Fund - Check for existing holding with same scheme code and platform
       const mf = assetInput as Partial<MutualFund>;
-      result = await pool.query(
-        `INSERT INTO assets (
-          type, bank_name, scheme_code, scheme_name, fund_house, units, average_nav
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`,
-        [
-          'mutual-fund',
-          mf.bankName, // Platform name
-          mf.schemeCode,
-          mf.schemeName,
-          mf.fundHouse,
-          mf.units,
-          mf.averageNav,
-        ]
+      
+      const existingMF = await pool.query(
+        `SELECT * FROM assets WHERE type = 'mutual-fund' AND scheme_code = $1 AND bank_name = $2`,
+        [mf.schemeCode, mf.bankName]
       );
+      
+      if (existingMF.rows.length > 0) {
+        // Aggregate with existing holding
+        const existing = existingMF.rows[0];
+        const existingUnits = parseFloat(existing.units);
+        const existingAvgNav = parseFloat(existing.average_nav);
+        const newUnits = mf.units!;
+        const newAvgNav = mf.averageNav!;
+        
+        // Calculate new average NAV: (oldUnits * oldAvg + newUnits * newAvg) / (oldUnits + newUnits)
+        const totalUnits = existingUnits + newUnits;
+        const weightedAvgNav = ((existingUnits * existingAvgNav) + (newUnits * newAvgNav)) / totalUnits;
+        
+        result = await pool.query(
+          `UPDATE assets SET
+            units = $1,
+            average_nav = $2,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $3
+          RETURNING *`,
+          [totalUnits, weightedAvgNav, existing.id]
+        );
+        
+        logger.info('Mutual fund holding aggregated', {
+          schemeCode: mf.schemeCode,
+          platform: mf.bankName,
+          oldUnits: existingUnits,
+          newUnits,
+          totalUnits,
+          oldAvgNav: existingAvgNav,
+          newAvgNav,
+          weightedAvgNav
+        });
+      } else {
+        // Create new holding
+        result = await pool.query(
+          `INSERT INTO assets (
+            type, bank_name, scheme_code, scheme_name, fund_house, units, average_nav
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING *`,
+          [
+            'mutual-fund',
+            mf.bankName, // Platform name
+            mf.schemeCode,
+            mf.schemeName,
+            mf.fundHouse,
+            mf.units,
+            mf.averageNav,
+          ]
+        );
+      }
     }
 
     const createdAsset = rowToAsset(result.rows[0]);
