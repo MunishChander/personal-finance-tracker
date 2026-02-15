@@ -18,9 +18,11 @@ import {
   FixedDeposit,
   SavingsAccount,
   Equity,
+  MutualFund,
   DashboardStats,
 } from '@personal-finance-tracker/shared';
 import { getStockQuote, getMultipleStockQuotes } from '../services/yahooFinanceService.js';
+import { getMFQuote, getMultipleMFQuotes } from '../services/mfApiService.js';
 
 /**
  * Helper function to convert database row to Asset object
@@ -66,7 +68,7 @@ function rowToAsset(row: any): Asset {
       currentBalance: parseFloat(row.current_balance),
       interestRate: row.interest_rate ? parseFloat(row.interest_rate) : undefined,
     } as SavingsAccount;
-  } else {
+  } else if (row.type === 'equity') {
     // Equity
     const quantity = parseFloat(row.quantity);
     const averagePrice = parseFloat(row.average_price);
@@ -90,6 +92,30 @@ function rowToAsset(row: any): Asset {
       gainLoss,
       gainLossPercentage,
     } as Equity;
+  } else {
+    // Mutual Fund
+    const units = parseFloat(row.units);
+    const averageNav = parseFloat(row.average_nav);
+    const totalInvestment = units * averageNav;
+    const currentNav = row.current_nav ? parseFloat(row.current_nav) : undefined;
+    const currentValue = currentNav ? units * currentNav : undefined;
+    const gainLoss = currentValue ? currentValue - totalInvestment : undefined;
+    const gainLossPercentage = gainLoss ? (gainLoss / totalInvestment) * 100 : undefined;
+
+    return {
+      ...base,
+      type: 'mutual-fund',
+      schemeCode: row.scheme_code,
+      schemeName: row.scheme_name,
+      fundHouse: row.fund_house,
+      units,
+      averageNav,
+      currentNav,
+      totalInvestment,
+      currentValue,
+      gainLoss,
+      gainLossPercentage,
+    } as MutualFund;
   }
 }
 
@@ -107,11 +133,18 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
       validationResult = validateFixedDeposit(assetInput);
     } else if (assetInput.type === 'savings-account') {
       validationResult = validateSavingsAccount(assetInput);
-    } else {
+    } else if (assetInput.type === 'equity') {
       // Basic equity validation
       const equity = assetInput as Partial<Equity>;
       validationResult = {
         isValid: !!(equity.symbol && equity.companyName && equity.exchange && equity.quantity && equity.averagePrice),
+        errors: []
+      };
+    } else {
+      // Basic mutual fund validation
+      const mf = assetInput as Partial<MutualFund>;
+      validationResult = {
+        isValid: !!(mf.schemeCode && mf.schemeName && mf.fundHouse && mf.units && mf.averageNav),
         errors: []
       };
     }
@@ -164,7 +197,7 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           sa.interestRate || null,
         ]
       );
-    } else {
+    } else if (assetInput.type === 'equity') {
       // Equity
       const equity = assetInput as Partial<Equity>;
       result = await pool.query(
@@ -180,6 +213,24 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           equity.exchange,
           equity.quantity,
           equity.averagePrice,
+        ]
+      );
+    } else {
+      // Mutual Fund
+      const mf = assetInput as Partial<MutualFund>;
+      result = await pool.query(
+        `INSERT INTO assets (
+          type, bank_name, scheme_code, scheme_name, fund_house, units, average_nav
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *`,
+        [
+          'mutual-fund',
+          mf.bankName, // Platform name
+          mf.schemeCode,
+          mf.schemeName,
+          mf.fundHouse,
+          mf.units,
+          mf.averageNav,
         ]
       );
     }

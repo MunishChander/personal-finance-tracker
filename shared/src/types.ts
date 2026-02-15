@@ -5,7 +5,7 @@
 // Asset Base Model
 export interface AssetBase {
   id: string;
-  type: 'fixed-deposit' | 'savings-account' | 'equity';
+  type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund';
   bankName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -50,11 +50,27 @@ export interface Equity extends AssetBase {
   dayChangePercentage?: number; // Today's percentage change
 }
 
+// Mutual Fund Model
+export interface MutualFund extends AssetBase {
+  type: 'mutual-fund';
+  bankName: string; // Platform name (Groww, Zerodha Coin, etc.)
+  schemeCode: string; // AMFI scheme code
+  schemeName: string;
+  fundHouse: string; // AMC name (SBI Mutual Fund, HDFC Mutual Fund, etc.)
+  units: number; // Number of units held
+  averageNav: number; // Average purchase NAV
+  currentNav?: number; // Current NAV (fetched from API)
+  totalInvestment: number; // units * averageNav
+  currentValue?: number; // units * currentNav
+  gainLoss?: number; // currentValue - totalInvestment
+  gainLossPercentage?: number; // (gainLoss / totalInvestment) * 100
+}
+
 // Union Type
-export type Asset = FixedDeposit | SavingsAccount | Equity;
+export type Asset = FixedDeposit | SavingsAccount | Equity | MutualFund;
 
 // Asset Type
-export type AssetType = 'fixed-deposit' | 'savings-account' | 'equity';
+export type AssetType = 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund';
 
 // Filter Model
 export interface AssetFilters {
