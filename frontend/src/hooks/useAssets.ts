@@ -63,14 +63,27 @@ export function useAssets(): UseAssetsReturn {
   }, [refreshAssets]);
 
   /**
-   * Add a new asset
+   * Add a new asset (or update if aggregated)
    */
   const addAsset = useCallback(
     async (assetInput: AssetInput): Promise<void> => {
       try {
         setError(null);
-        const newAsset = await createAsset(assetInput);
-        setAssets((prevAssets) => [...prevAssets, newAsset]);
+        const returnedAsset = await createAsset(assetInput);
+        
+        // Check if this asset already exists (aggregation case)
+        setAssets((prevAssets) => {
+          const existingIndex = prevAssets.findIndex(a => a.id === returnedAsset.id);
+          if (existingIndex >= 0) {
+            // Update existing asset (aggregation happened)
+            const updated = [...prevAssets];
+            updated[existingIndex] = returnedAsset;
+            return updated;
+          } else {
+            // Add new asset
+            return [...prevAssets, returnedAsset];
+          }
+        });
       } catch (err) {
         const errorMessage =
           err instanceof ApiError ? err.message : 'Failed to add asset';
