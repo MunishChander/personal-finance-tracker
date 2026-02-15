@@ -709,3 +709,99 @@ export async function searchStockSymbols(req: Request, res: Response): Promise<v
     });
   }
 }
+
+/**
+ * GET /api/mutualfunds/nav
+ * Fetch live NAVs for all mutual funds
+ */
+export async function refreshMutualFundNavs(req: Request, res: Response): Promise<void> {
+  try {
+    // Get all mutual funds from database
+    const result = await pool.query(
+      "SELECT * FROM assets WHERE type = 'mutual-fund'"
+    );
+
+    if (result.rows.length === 0) {
+      res.json({
+        success: true,
+        data: [],
+      });
+      return;
+    }
+
+    // Extract scheme codes
+    const schemeCodes = result.rows.map(row => row.scheme_code);
+
+    // Fetch live NAVs
+    const quotes = await getMultipleMFQuotes(schemeCodes);
+
+    // Update database with current NAVs
+    const updatePromises = result.rows.map(async (row) => {
+      const quote = quotes.get(row.scheme_code);
+      if (quote) {
+        await pool.query(
+          'UPDATE assets SET current_nav = $1 WHERE id = $2',
+          [quote.nav, row.id]
+        );
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    // Fetch updated assets
+    const updatedResult = await pool.query(
+      "SELECT * FROM assets WHERE type = 'mutual-fund'"
+    );
+
+    const mutualFunds = updatedResult.rows.map(rowToAsset);
+
+    logger.info('Mutual fund NAVs refreshed', { count: mutualFunds.length });
+
+    res.json({
+      success: true,
+      data: mutualFunds,
+    });
+  } catch (error: any) {
+    logger.error('Error refreshing mutual fund NAVs', {}, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to refresh mutual fund NAVs',
+    });
+  }
+}
+
+/**
+ * GET /api/mutualfunds/search?q=query
+ * Search for mutual fund schemes
+ */
+export async function searchMutualFundSchemes(req: Request, res: Response): Promise<void> {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'Query parameter "q" is required',
+      });
+      return;
+    }
+
+    const { searchMutualFunds } = await import('../services/mfApiService.js');
+    const results = await searchMutualFunds(q);
+
+    logger.info('Mutual fund search completed', { query: q, count: results.length });
+
+    res.json({
+      success: true,
+      data: results,
+    });
+  } catch (error: any) {
+    logger.error('Error searching mutual funds', { query: req.query.q }, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search mutual funds',
+    });
+  }
+}

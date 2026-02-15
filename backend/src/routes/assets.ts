@@ -13,6 +13,8 @@ import {
   getAssetStats,
   refreshEquityPrices,
   searchStockSymbols,
+  refreshMutualFundNavs,
+  searchMutualFundSchemes,
 } from '../controllers/assetsController';
 
 const router = Router();
@@ -20,6 +22,10 @@ const router = Router();
 // Equity-specific endpoints (must come before :id route)
 router.get('/equities/prices', refreshEquityPrices);
 router.get('/equities/search', searchStockSymbols);
+
+// Mutual fund-specific endpoints
+router.get('/mutualfunds/nav', refreshMutualFundNavs);
+router.get('/mutualfunds/search', searchMutualFundSchemes);
 
 // Stats endpoint must come before :id to avoid route conflicts
 router.get('/stats', getAssetStats);

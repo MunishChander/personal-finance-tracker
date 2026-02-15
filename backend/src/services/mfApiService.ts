@@ -29,7 +29,7 @@ export async function getMFQuote(schemeCode: string): Promise<MFQuote | null> {
       return null;
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     if (data.status !== 'SUCCESS' || !data.data || data.data.length === 0) {
       logger.warn(`No NAV data found for scheme ${schemeCode}`);
@@ -88,7 +88,7 @@ export async function searchMutualFunds(query: string): Promise<MFSearchResult[]
       return [];
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     if (!Array.isArray(data)) {
       logger.warn(`Unexpected response format from MFApi search`);
