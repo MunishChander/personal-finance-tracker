@@ -17,6 +17,7 @@ function App() {
   
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addAssetType, setAddAssetType] = useState<'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund'>('fixed-deposit');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deleteConfirmAsset, setDeleteConfirmAsset] = useState<Asset | null>(null);
   
@@ -57,6 +58,12 @@ function App() {
   const handleRetry = async () => {
     showToast('Retrying connection...', 'success');
     await refreshAssets();
+  };
+
+  // Handle add asset from tab
+  const handleAddFromTab = (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund') => {
+    setAddAssetType(type);
+    setShowAddModal(true);
   };
 
   // Handle add asset
@@ -177,16 +184,6 @@ function App() {
             {/* Dashboard */}
             <Dashboard assets={assets} />
 
-            {/* Add Asset Button */}
-            <div className="action-bar">
-              <button
-                className="btn btn-primary btn-add-asset"
-                onClick={() => setShowAddModal(true)}
-              >
-                + Add Asset
-              </button>
-            </div>
-
             {/* Asset Tabs with Table View */}
             <AssetTabs
               assets={assets}
@@ -195,6 +192,7 @@ function App() {
                 const asset = assets.find((a) => a.id === assetId);
                 if (asset) setDeleteConfirmAsset(asset);
               }}
+              onAdd={handleAddFromTab}
               onRefreshPrices={handleRefreshEquityPrices}
               onRefreshMFNavs={handleRefreshMFNavs}
             />
@@ -207,6 +205,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <AssetForm
+              assetType={addAssetType}
               onSubmit={handleAddAsset}
               onCancel={() => setShowAddModal(false)}
             />

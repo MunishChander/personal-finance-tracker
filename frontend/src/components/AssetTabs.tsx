@@ -6,13 +6,14 @@ interface AssetTabsProps {
   assets: Asset[];
   onEdit: (asset: Asset) => void;
   onDelete: (assetId: string) => void;
+  onAdd: (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund') => void;
   onRefreshPrices?: () => Promise<void>;
   onRefreshMFNavs?: () => Promise<void>;
 }
 
 type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds';
 
-export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onRefreshPrices, onRefreshMFNavs }) => {
+export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onAdd, onRefreshPrices, onRefreshMFNavs }) => {
   const [activeTab, setActiveTab] = useState<TabType>('fixed-deposits');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingMF, setIsRefreshingMF] = useState(false);
@@ -125,7 +126,16 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
         <div className="asset-section">
           <div className="section-header">
             <span>🏦 Fixed Deposits ({fixedDeposits.length} assets)</span>
-            <span className="section-value">{formatCurrency(totalFDValue)}</span>
+            <div className="section-header-actions">
+              <button
+                className="btn-add-asset-tab"
+                onClick={() => onAdd('fixed-deposit')}
+                title="Add Fixed Deposit"
+              >
+                + Add FD
+              </button>
+              <span className="section-value">{formatCurrency(totalFDValue)}</span>
+            </div>
           </div>
 
           {fixedDeposits.length === 0 ? (
@@ -205,7 +215,16 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
         <div className="asset-section">
           <div className="section-header">
             <span>💰 Savings Accounts ({savingsAccounts.length} accounts)</span>
-            <span className="section-value">{formatCurrency(totalSavingsValue)}</span>
+            <div className="section-header-actions">
+              <button
+                className="btn-add-asset-tab"
+                onClick={() => onAdd('savings-account')}
+                title="Add Savings Account"
+              >
+                + Add Account
+              </button>
+              <span className="section-value">{formatCurrency(totalSavingsValue)}</span>
+            </div>
           </div>
 
           {savingsAccounts.length === 0 ? (
@@ -269,6 +288,13 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
           <div className="section-header">
             <span>📈 Equities ({equities.length} holdings)</span>
             <div className="section-header-actions">
+              <button
+                className="btn-add-asset-tab"
+                onClick={() => onAdd('equity')}
+                title="Add Equity"
+              >
+                + Add Stock
+              </button>
               {onRefreshPrices && equities.length > 0 && (
                 <button
                   className="btn-refresh"
@@ -374,6 +400,13 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
           <div className="section-header">
             <span>📊 Mutual Funds ({mutualFunds.length} holdings)</span>
             <div className="section-header-actions">
+              <button
+                className="btn-add-asset-tab"
+                onClick={() => onAdd('mutual-fund')}
+                title="Add Mutual Fund"
+              >
+                + Add Fund
+              </button>
               {onRefreshMFNavs && mutualFunds.length > 0 && (
                 <button
                   className="btn-refresh"

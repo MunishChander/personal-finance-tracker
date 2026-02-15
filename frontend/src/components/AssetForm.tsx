@@ -277,10 +277,10 @@ export const AssetForm: React.FC<AssetFormProps> = ({
         return;
       }
     } else {
-      // Mutual Fund
+      // Mutual Fund - bankName is optional (platform name)
       const mfAsset: any = {
         type: 'mutual-fund',
-        bankName: bankName.trim(), // Platform name
+        bankName: bankName.trim() || 'Direct', // Default to 'Direct' if not provided
         schemeCode: schemeCode.trim(),
         schemeName: schemeName.trim(),
         fundHouse: fundHouse.trim(),
@@ -291,7 +291,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({
       
       // Basic validation
       const errorMap: Record<string, string> = {};
-      if (!bankName.trim()) errorMap.bankName = 'Platform name is required';
       if (!schemeCode.trim()) errorMap.schemeCode = 'Scheme code is required';
       if (!schemeName.trim()) errorMap.schemeName = 'Scheme name is required';
       if (!fundHouse.trim()) errorMap.fundHouse = 'Fund house is required';
@@ -344,21 +343,23 @@ export const AssetForm: React.FC<AssetFormProps> = ({
         </div>
       )}
       
-      {/* Bank Name / Broker Name */}
-      <div className="form-group">
-        <label htmlFor="bankName" className="form-label">
-          {assetType === 'equity' ? 'Broker Name' : 'Bank Name'} <span className="required">*</span>
-        </label>
-        <input
-          id="bankName"
-          type="text"
-          className={`form-input ${errors.bankName ? 'form-input-error' : ''}`}
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
-          placeholder={assetType === 'equity' ? 'e.g., Zerodha, Upstox' : 'e.g., HDFC Bank'}
-        />
-        {errors.bankName && <span className="error-message">{errors.bankName}</span>}
-      </div>
+      {/* Bank Name / Broker Name - Only for FD, Savings, and Equity */}
+      {assetType !== 'mutual-fund' && (
+        <div className="form-group">
+          <label htmlFor="bankName" className="form-label">
+            {assetType === 'equity' ? 'Broker Name' : assetType === 'savings-account' ? 'Bank Name' : 'Bank Name'} <span className="required">*</span>
+          </label>
+          <input
+            id="bankName"
+            type="text"
+            className={`form-input ${errors.bankName ? 'form-input-error' : ''}`}
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            placeholder={assetType === 'equity' ? 'e.g., Zerodha, Upstox' : 'e.g., HDFC Bank'}
+          />
+          {errors.bankName && <span className="error-message">{errors.bankName}</span>}
+        </div>
+      )}
       
       {/* Conditional Fields for Fixed Deposit */}
       {assetType === 'fixed-deposit' && (
