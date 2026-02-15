@@ -1,196 +1,193 @@
-/* Dashboard Container */
-.dashboard {
-  padding: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.dashboard-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 1.5rem;
-}
-
-/* Dashboard Sections */
-.dashboard-section {
-  margin-bottom: 2rem;
-}
-
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-}
-
-/* Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-/* Dashboard Cards */
-.dashboard-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 0.75rem;
+/* Portfolio Summary - Matching UX Vision */
+.portfolio-summary {
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
-}
-
-.dashboard-card:hover {
+  border-radius: 16px;
+  margin-bottom: 2rem;
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  border: 1px solid var(--border-color);
 }
 
-.dashboard-card-primary {
-  background: linear-gradient(135deg, #6c3cb5 0%, #5a2f99 100%);
-  color: #ffffff;
-  border: none;
+.summary-left {
+  display: flex;
+  flex-direction: column;
 }
 
-.dashboard-card-primary .card-title,
-.dashboard-card-primary .card-value,
-.dashboard-card-primary .card-subtitle {
-  color: #ffffff;
+.summary-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
 }
 
-.dashboard-card-warning {
-  background: #fef3c7;
-  border-color: #fbbf24;
-}
-
-.dashboard-card-warning .card-title {
-  color: #92400e;
-}
-
-.dashboard-card-warning .card-value {
-  color: #b45309;
-}
-
-.dashboard-card-warning .card-subtitle {
-  color: #92400e;
-}
-
-.dashboard-card-info {
-  background: #e0f2fe;
-  border-color: #38bdf8;
-}
-
-.dashboard-card-info .card-title {
-  color: #075985;
-}
-
-.dashboard-card-info .card-value {
-  color: #0369a1;
-}
-
-/* Card Content */
-.card-title {
-  font-size: 0.875rem;
+.portfolio-summary h2 {
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.5px;
   margin-bottom: 0.5rem;
 }
 
-.card-value {
-  font-size: 1.875rem;
+.total-value {
+  font-size: 2.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 1rem;
+  line-height: 1;
 }
 
-.card-value-large {
-  font-size: 2.5rem;
+/* Summary Grid */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
-.card-subtitle {
-  font-size: 0.875rem;
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--text-tertiary);
-  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
-/* Tablet Styles (min-width: 640px) */
-@media (min-width: 640px) {
-  .dashboard {
-    padding: 1.5rem;
-  }
-
-  .dashboard-title {
-    font-size: 2rem;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .section-title {
-    font-size: 1.5rem;
-  }
+.summary-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-/* Desktop Styles (min-width: 1024px) */
-@media (min-width: 1024px) {
-  .dashboard {
-    padding: 2rem;
-  }
+.summary-value.green {
+  color: var(--success);
+}
 
-  .dashboard-title {
-    font-size: 2.25rem;
-    margin-bottom: 2rem;
-  }
+.summary-value.orange {
+  color: var(--warning);
+}
 
-  .dashboard-grid {
-    grid-template-columns: repeat(3, 1fr);
+/* Pie Chart */
+.pie-chart-container {
+  width: 200px;
+  height: 200px;
+  position: relative;
+}
+
+.pie-chart {
+  width: 100%;
+  height: 100%;
+  transform: rotate(0deg);
+}
+
+.center-circle {
+  fill: var(--card-bg);
+}
+
+.center-text {
+  fill: var(--text-primary);
+}
+
+/* Pie Legend */
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  flex: 1;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.legend-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .portfolio-summary {
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
-  .dashboard-card {
-    padding: 2rem;
+  .summary-right {
+    flex-direction: row;
+    justify-content: space-around;
   }
 
-  .card-value {
-    font-size: 2.25rem;
-  }
-
-  .card-value-large {
-    font-size: 3rem;
+  .pie-chart-container {
+    width: 180px;
+    height: 180px;
   }
 }
 
-/* Large Desktop Styles (min-width: 1280px) */
-@media (min-width: 1280px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
+@media (max-width: 768px) {
+  .portfolio-summary {
+    padding: 1.25rem;
+  }
+
+  .total-value {
+    font-size: 2rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .summary-right {
+    flex-direction: column;
+  }
+
+  .pie-chart-container {
+    width: 160px;
+    height: 160px;
   }
 }
 
-/* Touch-friendly styles for mobile */
-@media (hover: none) and (pointer: coarse) {
-  .dashboard-card {
-    min-height: 120px;
+@media (max-width: 480px) {
+  .portfolio-summary {
+    padding: 1rem;
   }
-}
 
-/* Empty State */
-.dashboard-empty {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--text-tertiary);
-}
+  .total-value {
+    font-size: 1.75rem;
+  }
 
-.dashboard-empty h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-}
+  .pie-chart-container {
+    width: 140px;
+    height: 140px;
+  }
 
-.dashboard-empty p {
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
+  .legend-item {
+    font-size: 0.8125rem;
+  }
 }

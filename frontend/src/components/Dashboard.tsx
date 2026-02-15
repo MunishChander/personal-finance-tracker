@@ -8,53 +8,37 @@ interface DashboardProps {
 
 interface DashboardStats {
   totalPortfolioValue: number;
-  totalFixedDepositsCurrent: number;
-  totalFixedDepositsMaturity: number;
+  totalFixedDeposits: number;
   totalSavingsAccounts: number;
   fixedDepositCount: number;
   savingsAccountCount: number;
-  maturingSoon: number;
 }
 
 const calculateStats = (assets: Asset[]): DashboardStats => {
-  let totalFixedDepositsCurrent = 0;
-  let totalFixedDepositsMaturity = 0;
+  let totalFixedDeposits = 0;
   let totalSavingsAccounts = 0;
   let fixedDepositCount = 0;
   let savingsAccountCount = 0;
-  let maturingSoon = 0;
-
-  const now = new Date();
-  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   assets.forEach((asset) => {
     if (asset.type === 'fixed-deposit') {
       const fd = asset as FixedDeposit;
-      totalFixedDepositsCurrent += fd.principalAmount;
-      totalFixedDepositsMaturity += fd.maturityAmount;
+      totalFixedDeposits += fd.principalAmount;
       fixedDepositCount++;
-
-      // Check if maturing in next 30 days
-      const maturityDate = new Date(fd.maturityDate);
-      if (maturityDate >= now && maturityDate <= thirtyDaysFromNow) {
-        maturingSoon++;
-      }
     } else if (asset.type === 'savings-account') {
       totalSavingsAccounts += asset.currentBalance;
       savingsAccountCount++;
     }
   });
 
-  const totalPortfolioValue = totalFixedDepositsCurrent + totalSavingsAccounts;
+  const totalPortfolioValue = totalFixedDeposits + totalSavingsAccounts;
 
   return {
     totalPortfolioValue,
-    totalFixedDepositsCurrent,
-    totalFixedDepositsMaturity,
+    totalFixedDeposits,
     totalSavingsAccounts,
     fixedDepositCount,
     savingsAccountCount,
-    maturingSoon,
   };
 };
 
@@ -66,72 +50,115 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+const formatCompact = (amount: number): string => {
+  if (amount >= 10000000) {
+    return `₹${(amount / 10000000).toFixed(1)}Cr`;
+  } else if (amount >= 100000) {
+    return `₹${(amount / 100000).toFixed(1)}L`;
+  } else if (amount >= 1000) {
+    return `₹${(amount / 1000).toFixed(1)}K`;
+  }
+  return formatCurrency(amount);
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ assets }) => {
   const stats = calculateStats(assets);
 
+  // Calculate percentages for pie chart
+  const fdPercentage = stats.totalPortfolioValue > 0 
+    ? (stats.totalFixedDeposits / stats.totalPortfolioValue) * 100 
+    : 0;
+  const savingsPercentage = stats.totalPortfolioValue > 0 
+    ? (stats.totalSavingsAccounts / stats.totalPortfolioValue) * 100 
+    : 0;
+
+  // Calculate pie chart segments (SVG circle with circumference 502.65)
+  const circumference = 502.65;
+  const fdDashArray = `${(fdPercentage / 100) * circumference} ${circumference}`;
+  const savingsDashArray = `${(savingsPercentage / 100) * circumference} ${circumference}`;
+  const savingsDashOffset = -((fdPercentage / 100) * circumference);
+
   return (
-    <div className="dashboard">
-      <h1 className="dashboard-title">Portfolio Overview</h1>
-
-      {/* Total Portfolio Value */}
-      <div className="dashboard-card dashboard-card-primary">
-        <h2 className="card-title">Total Portfolio Value</h2>
-        <p className="card-value card-value-large">{formatCurrency(stats.totalPortfolioValue)}</p>
-      </div>
-
-      {/* Fixed Deposits Section */}
-      <div className="dashboard-section">
-        <h2 className="section-title">Fixed Deposits</h2>
-        <div className="dashboard-grid">
-          <div className="dashboard-card">
-            <h3 className="card-title">Current Value</h3>
-            <p className="card-value">{formatCurrency(stats.totalFixedDepositsCurrent)}</p>
-            <p className="card-subtitle">{stats.fixedDepositCount} deposit{stats.fixedDepositCount !== 1 ? 's' : ''}</p>
+    <div className="portfolio-summary">
+      <div className="summary-left">
+        <h2>Portfolio Summary</h2>
+        <div className="total-value">{formatCurrency(stats.totalPortfolioValue)}</div>
+        
+        <div className="summary-grid">
+          <div className="summary-item">
+            <span className="summary-label">Fixed Deposits</span>
+            <span className="summary-value">{formatCompact(stats.totalFixedDeposits)}</span>
           </div>
-          <div className="dashboard-card">
-            <h3 className="card-title">Maturity Value</h3>
-            <p className="card-value">{formatCurrency(stats.totalFixedDepositsMaturity)}</p>
-            <p className="card-subtitle">
-              Expected returns: {formatCurrency(stats.totalFixedDepositsMaturity - stats.totalFixedDepositsCurrent)}
-            </p>
+          <div className="summary-item">
+            <span className="summary-label">Savings Accounts</span>
+            <span className="summary-value">{formatCompact(stats.totalSavingsAccounts)}</span>
           </div>
-          {stats.maturingSoon > 0 && (
-            <div className="dashboard-card dashboard-card-warning">
-              <h3 className="card-title">Maturing Soon</h3>
-              <p className="card-value">{stats.maturingSoon}</p>
-              <p className="card-subtitle">In next 30 days</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Savings Accounts Section */}
-      <div className="dashboard-section">
-        <h2 className="section-title">Savings Accounts</h2>
-        <div className="dashboard-grid">
-          <div className="dashboard-card">
-            <h3 className="card-title">Total Balance</h3>
-            <p className="card-value">{formatCurrency(stats.totalSavingsAccounts)}</p>
-            <p className="card-subtitle">{stats.savingsAccountCount} account{stats.savingsAccountCount !== 1 ? 's' : ''}</p>
+          <div className="summary-item">
+            <span className="summary-label">Total Assets</span>
+            <span className="summary-value">{assets.length} items</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">FD Count</span>
+            <span className="summary-value">{stats.fixedDepositCount}</span>
           </div>
         </div>
       </div>
 
-      {/* Asset Counts Summary */}
-      <div className="dashboard-section">
-        <h2 className="section-title">Asset Summary</h2>
-        <div className="dashboard-grid">
-          <div className="dashboard-card dashboard-card-info">
-            <h3 className="card-title">Total Assets</h3>
-            <p className="card-value">{assets.length}</p>
+      <div className="summary-right">
+        <div className="pie-chart-container">
+          <svg className="pie-chart" viewBox="0 0 200 200">
+            {/* Fixed Deposits segment */}
+            {fdPercentage > 0 && (
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="40"
+                strokeDasharray={fdDashArray}
+                strokeDashoffset="0"
+                transform="rotate(-90 100 100)"
+                strokeLinecap="round"
+              />
+            )}
+            {/* Savings segment */}
+            {savingsPercentage > 0 && (
+              <circle
+                cx="100"
+                cy="100"
+                r="80"
+                fill="none"
+                stroke="#f59e0b"
+                strokeWidth="40"
+                strokeDasharray={savingsDashArray}
+                strokeDashoffset={savingsDashOffset}
+                transform="rotate(-90 100 100)"
+                strokeLinecap="round"
+              />
+            )}
+            {/* Center circle for donut effect */}
+            <circle cx="100" cy="100" r="60" className="center-circle" />
+            {/* Center text */}
+            <text x="100" y="95" textAnchor="middle" fontSize="14" fontWeight="600" fill="var(--text-tertiary)">
+              Total
+            </text>
+            <text x="100" y="115" textAnchor="middle" fontSize="18" fontWeight="700" fill="var(--text-primary)" className="center-text">
+              {formatCompact(stats.totalPortfolioValue)}
+            </text>
+          </svg>
+        </div>
+
+        <div className="pie-legend">
+          <div className="legend-item">
+            <span className="legend-color" style={{ background: '#10b981' }}></span>
+            <span className="legend-label">Fixed Deposits ({fdPercentage.toFixed(1)}%)</span>
+            <span className="legend-value">{formatCompact(stats.totalFixedDeposits)}</span>
           </div>
-          <div className="dashboard-card dashboard-card-info">
-            <h3 className="card-title">Fixed Deposits</h3>
-            <p className="card-value">{stats.fixedDepositCount}</p>
-          </div>
-          <div className="dashboard-card dashboard-card-info">
-            <h3 className="card-title">Savings Accounts</h3>
-            <p className="card-value">{stats.savingsAccountCount}</p>
+          <div className="legend-item">
+            <span className="legend-color" style={{ background: '#f59e0b' }}></span>
+            <span className="legend-label">Savings ({savingsPercentage.toFixed(1)}%)</span>
+            <span className="legend-value">{formatCompact(stats.totalSavingsAccounts)}</span>
           </div>
         </div>
       </div>
