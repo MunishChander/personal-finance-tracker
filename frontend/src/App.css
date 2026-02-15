@@ -104,45 +104,97 @@ body {
   gap: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logo-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
 .header-text {
   text-align: left;
 }
 
 .app-header h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2.5rem;
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(to right, #fff, #e0e7ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: white;
+  line-height: 1.2;
 }
 
 .app-header p {
   margin: 0;
-  font-size: 1.1rem;
-  opacity: 0.95;
+  font-size: 0.875rem;
+  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.logo-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
 }
 
 /* Theme Toggle Button */
 .theme-toggle {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 50px;
-  font-size: 1rem;
-  font-weight: 500;
+  padding: 0.625rem 0.75rem;
+  border-radius: 10px;
+  font-size: 1.25rem;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  backdrop-filter: blur(10px);
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -412,20 +464,26 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
   .app-header h1 {
-    font-size: 2rem;
+    font-size: 1.25rem;
   }
   
-  .app-header p {
-    font-size: 1rem;
+  .app-header p,
+  .logo-subtitle {
+    font-size: 0.75rem;
   }
 
   .header-content {
-    flex-direction: column;
-    text-align: center;
+    gap: 0.75rem;
   }
 
-  .header-text {
-    text-align: center;
+  .header-left {
+    gap: 0.75rem;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
   }
   
   .app-main {
@@ -467,11 +525,25 @@ body {
   }
 
   .app-header h1 {
-    font-size: 1.75rem;
+    font-size: 1.125rem;
   }
 
-  .app-header p {
-    font-size: 0.9rem;
+  .app-header p,
+  .logo-subtitle {
+    font-size: 0.6875rem;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    padding: 7px;
+  }
+
+  .theme-toggle {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.5rem;
+    font-size: 1.125rem;
   }
 
   .app-main {

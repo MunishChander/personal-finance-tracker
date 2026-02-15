@@ -95,12 +95,23 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <div className="header-text">
-            <h1>Personal Finance Tracker</h1>
-            <p>Manage your Fixed Deposits and Savings Accounts</p>
+          <div className="header-left">
+            <div className="logo">
+              <div className="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" fillOpacity="0.9"/>
+                  <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="logo-text">
+                <h1>Personal Finance Tracker</h1>
+                <p className="logo-subtitle">Manage your wealth with confidence</p>
+              </div>
+            </div>
           </div>
           <button className="theme-toggle" onClick={toggleTheme}>
-            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+            {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
       </header>
