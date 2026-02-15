@@ -105,6 +105,24 @@ function App() {
     }
   };
 
+  // Handle refresh all prices (equity + MF)
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
+  
+  const handleRefreshAllPrices = async () => {
+    setIsRefreshingPrices(true);
+    try {
+      await Promise.all([
+        refreshEquityPrices(),
+        refreshMutualFundNavs()
+      ]);
+      showToast('All prices refreshed successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to refresh prices. Please try again.', 'error');
+    } finally {
+      setIsRefreshingPrices(false);
+    }
+  };
+
   // Handle refresh equity prices
   const handleRefreshEquityPrices = async () => {
     try {
@@ -182,7 +200,11 @@ function App() {
         {!loading && (
           <>
             {/* Dashboard */}
-            <Dashboard assets={assets} />
+            <Dashboard 
+              assets={assets} 
+              onRefreshPrices={handleRefreshAllPrices}
+              isRefreshing={isRefreshingPrices}
+            />
 
             {/* Asset Tabs with Table View */}
             <AssetTabs
