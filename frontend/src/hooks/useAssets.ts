@@ -11,6 +11,7 @@ import {
   updateAsset as updateAssetApi,
   deleteAsset as deleteAssetApi,
   refreshEquityPrices as refreshEquityPricesApi,
+  refreshMutualFundNavs as refreshMutualFundNavsApi,
   ApiError,
 } from '../services/api';
 
@@ -23,6 +24,7 @@ export interface UseAssetsReturn {
   deleteAsset: (id: string) => Promise<void>;
   refreshAssets: () => Promise<void>;
   refreshEquityPrices: () => Promise<void>;
+  refreshMutualFundNavs: () => Promise<void>;
 }
 
 /**
@@ -146,6 +148,33 @@ export function useAssets(): UseAssetsReturn {
     }
   }, []);
 
+  /**
+   * Refresh mutual fund NAVs from MFApi
+   */
+  const refreshMutualFundNavs = useCallback(async (): Promise<void> => {
+    try {
+      setError(null);
+      const updatedMutualFunds = await refreshMutualFundNavsApi();
+      
+      // Update only mutual fund assets with new NAVs
+      setAssets((prevAssets) =>
+        prevAssets.map((asset) => {
+          if (asset.type === 'mutual-fund') {
+            const updatedMF = updatedMutualFunds.find((mf) => mf.id === asset.id);
+            return updatedMF || asset;
+          }
+          return asset;
+        })
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof ApiError ? err.message : 'Failed to refresh mutual fund NAVs';
+      setError(errorMessage);
+      console.error('Error refreshing mutual fund NAVs:', err);
+      throw err; // Re-throw to allow caller to handle
+    }
+  }, []);
+
   return {
     assets,
     loading,
@@ -155,5 +184,6 @@ export function useAssets(): UseAssetsReturn {
     deleteAsset,
     refreshAssets,
     refreshEquityPrices,
+    refreshMutualFundNavs,
   };
 }

@@ -253,3 +253,49 @@ export async function searchStocks(query: string): Promise<any[]> {
  * Export the configured axios instance for advanced usage
  */
 export { apiClient };
+
+/**
+ * GET /api/assets/mutualfunds/nav
+ * Refresh live NAVs for all mutual fund holdings
+ */
+export async function refreshMutualFundNavs(): Promise<Asset[]> {
+  try {
+    const response = await apiClient.get<ApiResponse<Asset[]>>(
+      '/assets/mutualfunds/nav'
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError('Failed to refresh mutual fund NAVs');
+    }
+
+    return response.data.data.map(transformAssetDates);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to refresh mutual fund NAVs', undefined, error);
+  }
+}
+
+/**
+ * GET /api/assets/mutualfunds/search?q=query
+ * Search for mutual fund schemes
+ */
+export async function searchMutualFunds(query: string): Promise<any[]> {
+  try {
+    const response = await apiClient.get<ApiResponse<any[]>>(
+      `/assets/mutualfunds/search?q=${encodeURIComponent(query)}`
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError('Failed to search mutual funds');
+    }
+
+    return response.data.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Failed to search mutual funds', undefined, error);
+  }
+}
