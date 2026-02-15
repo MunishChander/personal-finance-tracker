@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Asset, FixedDeposit, MutualFund, Equity } from '@personal-finance-tracker/shared';
+import { Asset, FixedDeposit, MutualFund, Equity, calculateAnnualizedReturn } from '@personal-finance-tracker/shared';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -34,6 +34,10 @@ interface DashboardStats {
   equityCount: number;
   mutualFundCount: number;
   maturingSoonCount: number;
+  fdAverageReturn: number;
+  savingsAverageReturn: number;
+  equityXIRR: number | null;
+  mfXIRR: number | null;
 }
 
 const calculateStats = (assets: Asset[]): DashboardStats => {
@@ -50,12 +54,22 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   let equityCount = 0;
   let mutualFundCount = 0;
   let maturingSoonCount = 0;
+  
+  // For average returns
+  let fdTotalInterestRate = 0;
+  let savingsTotalInterestRate = 0;
+  let savingsWithInterestCount = 0;
+  
+  // For XIRR calculation
+  const equityCashFlows: Array<{ date: Date; amount: number }> = [];
+  const mfCashFlows: Array<{ date: Date; amount: number }> = [];
 
   assets.forEach((asset) => {
     if (asset.type === 'fixed-deposit') {
       const fd = asset as FixedDeposit;
       totalFixedDeposits += fd.principalAmount;
       fixedDepositCount++;
+      fdTotalInterestRate += fd.interestRate;
       
       // Check if maturing within 30 days
       if (fd.daysToMaturity !== null && fd.daysToMaturity <= 30 && fd.daysToMaturity >= 0) {
@@ -64,6 +78,10 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
     } else if (asset.type === 'savings-account') {
       totalSavingsAccounts += asset.currentBalance;
       savingsAccountCount++;
+      if (asset.interestRate) {
+        savingsTotalInterestRate += asset.interestRate;
+        savingsWithInterestCount++;
+      }
     } else if (asset.type === 'equity') {
       const equity = asset as Equity;
       const currentValue = equity.currentValue || equity.totalInvestment;
@@ -71,6 +89,16 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
       totalEquitiesInvested += equity.totalInvestment;
       totalEquitiesGainLoss += equity.gainLoss || 0;
       equityCount++;
+      
+      // Add cash flows for XIRR (investment as negative, current value as positive)
+      equityCashFlows.push({
+        date: asset.createdAt,
+        amount: -equity.totalInvestment
+      });
+      equityCashFlows.push({
+        date: new Date(),
+        amount: currentValue
+      });
     } else if (asset.type === 'mutual-fund') {
       const mf = asset as MutualFund;
       const currentValue = mf.currentValue || mf.totalInvestment;
@@ -78,6 +106,16 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
       totalMutualFundsInvested += mf.totalInvestment;
       totalMutualFundsGainLoss += mf.gainLoss || 0;
       mutualFundCount++;
+      
+      // Add cash flows for XIRR
+      mfCashFlows.push({
+        date: asset.createdAt,
+        amount: -mf.totalInvestment
+      });
+      mfCashFlows.push({
+        date: new Date(),
+        amount: currentValue
+      });
     }
   });
 
@@ -86,6 +124,23 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   const totalGainLoss = totalEquitiesGainLoss + totalMutualFundsGainLoss;
   const totalGainLossPercentage = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
   const totalEquitiesGainLossPercentage = totalEquitiesInvested > 0 ? (totalEquitiesGainLoss / totalEquitiesInvested) * 100 : 0;
+  
+  // Calculate average returns
+  const fdAverageReturn = fixedDepositCount > 0 ? fdTotalInterestRate / fixedDepositCount : 0;
+  const savingsAverageReturn = savingsWithInterestCount > 0 ? savingsTotalInterestRate / savingsWithInterestCount : 0;
+  
+  // Calculate XIRR for equities and mutual funds
+  const equityXIRR = equityCashFlows.length >= 2 ? calculateAnnualizedReturn(
+    totalEquitiesInvested,
+    totalEquities,
+    equityCashFlows[0].date
+  ) : null;
+  
+  const mfXIRR = mfCashFlows.length >= 2 ? calculateAnnualizedReturn(
+    totalMutualFundsInvested,
+    totalMutualFunds,
+    mfCashFlows[0].date
+  ) : null;
 
   return {
     totalPortfolioValue,
@@ -106,6 +161,10 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
     equityCount,
     mutualFundCount,
     maturingSoonCount,
+    fdAverageReturn,
+    savingsAverageReturn,
+    equityXIRR,
+    mfXIRR,
   };
 };
 
@@ -342,6 +401,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
                 {stats.maturingSoonCount} maturing soon
               </div>
             )}
+            {stats.fdAverageReturn > 0 && (
+              <div className="card-metric">
+                <span className="metric-label">Avg. Return:</span>
+                <span className="metric-value">{stats.fdAverageReturn.toFixed(2)}% p.a.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -358,6 +423,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
             <h4 className="card-title">Savings Accounts</h4>
             <p className="card-value">{formatCompact(stats.totalSavingsAccounts)}</p>
             <p className="card-subtitle">{stats.savingsAccountCount} {stats.savingsAccountCount === 1 ? 'account' : 'accounts'}</p>
+            {stats.savingsAverageReturn > 0 && (
+              <div className="card-metric">
+                <span className="metric-label">Avg. Interest:</span>
+                <span className="metric-value">{stats.savingsAverageReturn.toFixed(2)}% p.a.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -376,6 +447,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
               <p className={`card-returns ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
                 {stats.totalEquitiesGainLoss >= 0 ? '+' : ''}{formatCompact(stats.totalEquitiesGainLoss)}
               </p>
+            )}
+            {stats.equityXIRR !== null && (
+              <div className="card-metric">
+                <span className="metric-label">XIRR:</span>
+                <span className={`metric-value ${stats.equityXIRR >= 0 ? 'positive' : 'negative'}`}>
+                  {stats.equityXIRR >= 0 ? '+' : ''}{(stats.equityXIRR * 100).toFixed(2)}% p.a.
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -396,6 +475,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
               <p className={`card-returns ${stats.totalMutualFundsGainLoss >= 0 ? 'positive' : 'negative'}`}>
                 {stats.totalMutualFundsGainLoss >= 0 ? '+' : ''}{formatCompact(stats.totalMutualFundsGainLoss)}
               </p>
+            )}
+            {stats.mfXIRR !== null && (
+              <div className="card-metric">
+                <span className="metric-label">XIRR:</span>
+                <span className={`metric-value ${stats.mfXIRR >= 0 ? 'positive' : 'negative'}`}>
+                  {stats.mfXIRR >= 0 ? '+' : ''}{(stats.mfXIRR * 100).toFixed(2)}% p.a.
+                </span>
+              </div>
             )}
           </div>
         </div>
