@@ -8,6 +8,7 @@ import {
   SavingsAccount,
 } from '@personal-finance-tracker/shared';
 import { StockSearch } from './StockSearch';
+import MutualFundSearch from './MutualFundSearch';
 import './AssetForm.css';
 
 type FixedDepositInput = Omit<FixedDeposit, 'id' | 'createdAt' | 'updatedAt' | 'maturityAmount' | 'daysToMaturity' | 'isMatured'>;
@@ -15,7 +16,7 @@ type SavingsAccountInput = Omit<SavingsAccount, 'id' | 'createdAt' | 'updatedAt'
 type EquityInput = Omit<any, 'id' | 'createdAt' | 'updatedAt'>;
 
 interface AssetFormProps {
-  assetType?: 'fixed-deposit' | 'savings-account' | 'equity';
+  assetType?: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund';
   initialData?: AssetInput | any;
   onSubmit: (asset: AssetInput) => Promise<void>;
   onCancel: () => void;
@@ -30,7 +31,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({
   const isEditMode = !!initialData;
   
   // Form state
-  const [assetType, setAssetType] = useState<'fixed-deposit' | 'savings-account' | 'equity'>(
+  const [assetType, setAssetType] = useState<'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund'>(
     initialData?.type || initialAssetType || 'fixed-deposit'
   );
   const [bankName, setBankName] = useState(initialData?.bankName || '');
@@ -122,6 +123,38 @@ export const AssetForm: React.FC<AssetFormProps> = ({
   });
   const [stockSearchQuery, setStockSearchQuery] = useState('');
   
+  // Mutual Fund fields
+  const [schemeCode, setSchemeCode] = useState(() => {
+    if (initialData?.type === 'mutual-fund') {
+      return (initialData as any).schemeCode || '';
+    }
+    return '';
+  });
+  const [schemeName, setSchemeName] = useState(() => {
+    if (initialData?.type === 'mutual-fund') {
+      return (initialData as any).schemeName || '';
+    }
+    return '';
+  });
+  const [fundHouse, setFundHouse] = useState(() => {
+    if (initialData?.type === 'mutual-fund') {
+      return (initialData as any).fundHouse || '';
+    }
+    return '';
+  });
+  const [units, setUnits] = useState(() => {
+    if (initialData?.type === 'mutual-fund') {
+      return (initialData as any).units?.toString() || '';
+    }
+    return '';
+  });
+  const [averageNav, setAverageNav] = useState(() => {
+    if (initialData?.type === 'mutual-fund') {
+      return (initialData as any).averageNav?.toString() || '';
+    }
+    return '';
+  });
+  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -141,6 +174,11 @@ export const AssetForm: React.FC<AssetFormProps> = ({
       setQuantity('');
       setAveragePrice('');
       setStockSearchQuery('');
+      setSchemeCode('');
+      setSchemeName('');
+      setFundHouse('');
+      setUnits('');
+      setAverageNav('');
       setErrors({});
     }
   }, [assetType, isEditMode]);
@@ -151,6 +189,17 @@ export const AssetForm: React.FC<AssetFormProps> = ({
     setCompanyName(stock.companyName);
     setExchange(stock.exchange);
     setStockSearchQuery('');
+  };
+
+  // Handle mutual fund selection from autocomplete
+  const handleMFSelect = (code: string, name: string) => {
+    setSchemeCode(code);
+    setSchemeName(name);
+    // Extract fund house from scheme name (usually first part before "-")
+    const parts = name.split('-');
+    if (parts.length > 0) {
+      setFundHouse(parts[0].trim());
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -203,7 +252,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({
         setErrors(errorMap);
         return;
       }
-    } else {
+    } else if (assetType === 'equity') {
       // Equity
       const equityAsset: any = {
         type: 'equity',
@@ -223,6 +272,32 @@ export const AssetForm: React.FC<AssetFormProps> = ({
       if (!companyName.trim()) errorMap.companyName = 'Company name is required';
       if (!quantity || parseFloat(quantity) <= 0) errorMap.quantity = 'Quantity must be greater than 0';
       if (!averagePrice || parseFloat(averagePrice) <= 0) errorMap.averagePrice = 'Average price must be greater than 0';
+      
+      if (Object.keys(errorMap).length > 0) {
+        setErrors(errorMap);
+        return;
+      }
+    } else {
+      // Mutual Fund
+      const mfAsset: any = {
+        type: 'mutual-fund',
+        bankName: bankName.trim(), // Platform name
+        schemeCode: schemeCode.trim(),
+        schemeName: schemeName.trim(),
+        fundHouse: fundHouse.trim(),
+        units: parseFloat(units),
+        averageNav: parseFloat(averageNav),
+      };
+      asset = mfAsset;
+      
+      // Basic validation
+      const errorMap: Record<string, string> = {};
+      if (!bankName.trim()) errorMap.bankName = 'Platform name is required';
+      if (!schemeCode.trim()) errorMap.schemeCode = 'Scheme code is required';
+      if (!schemeName.trim()) errorMap.schemeName = 'Scheme name is required';
+      if (!fundHouse.trim()) errorMap.fundHouse = 'Fund house is required';
+      if (!units || parseFloat(units) <= 0) errorMap.units = 'Units must be greater than 0';
+      if (!averageNav || parseFloat(averageNav) <= 0) errorMap.averageNav = 'Average NAV must be greater than 0';
       
       if (Object.keys(errorMap).length > 0) {
         setErrors(errorMap);
@@ -260,11 +335,12 @@ export const AssetForm: React.FC<AssetFormProps> = ({
             id="assetType"
             className="form-input"
             value={assetType}
-            onChange={(e) => setAssetType(e.target.value as 'fixed-deposit' | 'savings-account' | 'equity')}
+            onChange={(e) => setAssetType(e.target.value as 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund')}
           >
             <option value="fixed-deposit">Fixed Deposit</option>
             <option value="savings-account">Savings Account</option>
             <option value="equity">Equity</option>
+            <option value="mutual-fund">Mutual Fund</option>
           </select>
         </div>
       )}
