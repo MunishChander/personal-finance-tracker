@@ -13,6 +13,7 @@ import {
   getAssetStats,
   refreshEquityPrices,
   searchStockSymbols,
+  getStockPrice,
   refreshMutualFundNavs,
   searchMutualFundSchemes,
   getMutualFundNav,
@@ -23,6 +24,7 @@ const router = Router();
 // Equity-specific endpoints (must come before :id route)
 router.get('/equities/prices', refreshEquityPrices);
 router.get('/equities/search', searchStockSymbols);
+router.get('/equities/:symbol/price', getStockPrice);
 
 // Mutual fund-specific endpoints
 router.get('/mutualfunds/nav', refreshMutualFundNavs);

@@ -120,6 +120,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({
     }
     return '';
   });
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [stockSearchQuery, setStockSearchQuery] = useState('');
   
   // Mutual Fund fields
@@ -174,6 +176,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({
       setExchange('NSE');
       setQuantity('');
       setAveragePrice('');
+      setCurrentPrice(null);
       setStockSearchQuery('');
       setSchemeCode('');
       setSchemeName('');
@@ -186,11 +189,29 @@ export const AssetForm: React.FC<AssetFormProps> = ({
   }, [assetType, isEditMode]);
 
   // Handle stock selection from autocomplete
-  const handleStockSelect = (stock: { symbol: string; companyName: string; exchange: 'NSE' | 'BSE' }) => {
+  const handleStockSelect = async (stock: { symbol: string; companyName: string; exchange: 'NSE' | 'BSE' }) => {
     setSymbol(stock.symbol);
     setCompanyName(stock.companyName);
     setExchange(stock.exchange);
     setStockSearchQuery('');
+    
+    // Fetch current price
+    setIsFetchingPrice(true);
+    try {
+      const response = await fetch(`http://localhost:3000/api/assets/equities/${encodeURIComponent(stock.symbol)}/price`);
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.price) {
+        setCurrentPrice(data.data.price);
+      } else {
+        setCurrentPrice(null);
+      }
+    } catch (error) {
+      console.error('Error fetching price:', error);
+      setCurrentPrice(null);
+    } finally {
+      setIsFetchingPrice(false);
+    }
   };
 
   // Handle mutual fund selection from autocomplete
@@ -599,6 +620,17 @@ export const AssetForm: React.FC<AssetFormProps> = ({
             />
             {errors.companyName && <span className="error-message">{errors.companyName}</span>}
           </div>
+          
+          {/* Current Price Display */}
+          {currentPrice !== null && (
+            <div className="form-group">
+              <div className="current-price-display">
+                <span className="current-price-label">Current Price:</span>
+                <span className="current-price-value">₹{currentPrice.toFixed(2)}</span>
+                {isFetchingPrice && <span className="fetching-indicator">Updating...</span>}
+              </div>
+            </div>
+          )}
           
           <div className="form-row">
             <div className="form-group">

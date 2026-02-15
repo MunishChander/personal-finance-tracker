@@ -849,3 +849,47 @@ export async function getMutualFundNav(req: Request, res: Response): Promise<voi
     });
   }
 }
+
+/**
+ * GET /api/equities/:symbol/price
+ * Get current price for a specific stock symbol
+ */
+export async function getStockPrice(req: Request, res: Response): Promise<void> {
+  try {
+    const { symbol } = req.params;
+
+    if (!symbol) {
+      res.status(400).json({
+        success: false,
+        error: 'Stock symbol is required',
+      });
+      return;
+    }
+
+    logger.info('Fetching price for symbol', { symbol });
+
+    const priceData = await getStockQuote(symbol);
+
+    if (!priceData) {
+      res.status(404).json({
+        success: false,
+        error: 'Stock not found or price unavailable',
+      });
+      return;
+    }
+
+    logger.info('Price fetched successfully', { symbol, price: priceData.price });
+
+    res.json({
+      success: true,
+      data: priceData,
+    });
+  } catch (error: any) {
+    logger.error('Error fetching stock price', { symbol: req.params.symbol }, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch stock price',
+    });
+  }
+}
