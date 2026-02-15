@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Asset, AssetInput } from '@personal-finance-tracker/shared';
 import { useAssets } from './hooks/useAssets';
-import { useFilters } from './hooks/useFilters';
 import { Dashboard } from './components/Dashboard';
-import { FilterPanel } from './components/FilterPanel';
 import { AssetTabs } from './components/AssetTabs';
 import { AssetForm } from './components/AssetForm';
 import './App.css';
 
 function App() {
   const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets } = useAssets();
-  const { filters, filteredAssets, setAssetTypeFilter, setBankFilter } = useFilters(assets);
   
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -158,18 +155,9 @@ function App() {
               </button>
             </div>
 
-            {/* Filter Panel */}
-            <FilterPanel
-              filters={filters}
-              onFilterChange={(newFilters) => {
-                setAssetTypeFilter(newFilters.assetType);
-                setBankFilter(newFilters.bankName);
-              }}
-            />
-
             {/* Asset Tabs with Table View */}
             <AssetTabs
-              assets={filteredAssets}
+              assets={assets}
               onEdit={(asset) => setEditingAsset(asset)}
               onDelete={(assetId) => {
                 const asset = assets.find((a) => a.id === assetId);
