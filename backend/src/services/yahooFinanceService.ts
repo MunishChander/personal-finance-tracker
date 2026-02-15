@@ -1,5 +1,10 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import { logger } from '../utils/logger.js';
+
+// Initialize Yahoo Finance instance with suppressed notices
+const yahooFinance = new YahooFinance({ 
+  suppressNotices: ['yahooSurvey', 'ripHistorical'] 
+});
 
 export interface StockQuote {
   symbol: string;
@@ -11,27 +16,78 @@ export interface StockQuote {
 
 /**
  * Fetch current stock quote from Yahoo Finance
+ * Falls back to historical data if current price is unavailable (market closed)
  */
 export async function getStockQuote(symbol: string): Promise<StockQuote | null> {
   try {
     logger.info(`Fetching quote for ${symbol}`);
     
-    const quote = await yahooFinance.quote(symbol);
-    
-    if (!quote || !quote.regularMarketPrice) {
-      logger.warn(`No quote data found for ${symbol}`);
-      return null;
+    // Try to get current quote first using quoteSummary
+    try {
+      const result: any = await yahooFinance.quoteSummary(symbol, {
+        modules: ['price', 'summaryDetail']
+      });
+      
+      const price = result?.price;
+      if (price && price.regularMarketPrice) {
+        return {
+          symbol: price.symbol || symbol,
+          price: price.regularMarketPrice,
+          change: price.regularMarketChange || 0,
+          changePercent: price.regularMarketChangePercent || 0,
+          companyName: price.longName || price.shortName || symbol,
+        };
+      }
+    } catch (quoteError) {
+      logger.warn(`Current quote unavailable for ${symbol}, trying historical data`);
     }
-
-    return {
-      symbol: quote.symbol,
-      price: quote.regularMarketPrice,
-      change: quote.regularMarketChange || 0,
-      changePercent: quote.regularMarketChangePercent || 0,
-      companyName: quote.longName || quote.shortName || symbol,
-    };
-  } catch (error) {
-    logger.error(`Error fetching quote for ${symbol}:`, error);
+    
+    // Fallback to historical data (last closing price)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7); // Get last 7 days
+    
+    try {
+      const result: any = await yahooFinance.historical(symbol, {
+        period1: startDate,
+        period2: endDate,
+        interval: '1d'
+      });
+      
+      if (result && result.length > 0) {
+        // Get the most recent closing price
+        const lastQuote = result[result.length - 1];
+        
+        if (lastQuote.close) {
+          logger.info(`Using historical closing price for ${symbol}`, { 
+            date: lastQuote.date,
+            price: lastQuote.close 
+          });
+          
+          return {
+            symbol: symbol,
+            price: lastQuote.close,
+            change: 0, // No change data available from historical
+            changePercent: 0,
+            companyName: symbol,
+          };
+        }
+      }
+    } catch (historicalError: any) {
+      logger.error(`Historical data also unavailable for ${symbol}:`, {
+        message: historicalError.message
+      });
+    }
+    
+    logger.warn(`No price data found for ${symbol}`);
+    return null;
+    
+  } catch (error: any) {
+    logger.error(`Error fetching quote for ${symbol}:`, { 
+      message: error.message,
+      code: error.code,
+      type: error.constructor.name 
+    });
     return null;
   }
 }
@@ -65,14 +121,19 @@ export async function searchStocks(query: string): Promise<any[]> {
     
     // Try Yahoo Finance search first
     try {
-      const results = await yahooFinance.search(query);
+      const results: any = await yahooFinance.search(query, {
+        quotesCount: 10,
+        newsCount: 0
+      });
       logger.info(`Yahoo Finance search results:`, { count: results.quotes?.length || 0 });
       
       if (results.quotes && results.quotes.length > 0) {
         return results.quotes;
       }
-    } catch (searchError) {
-      logger.warn(`Yahoo Finance search failed, using fallback:`, searchError);
+    } catch (searchError: any) {
+      logger.warn(`Yahoo Finance search failed, using fallback:`, {
+        message: searchError.message
+      });
     }
     
     // Fallback: Common Indian stocks database
@@ -110,8 +171,10 @@ export async function searchStocks(query: string): Promise<any[]> {
     logger.info(`Fallback search results:`, { count: filtered.length });
     return filtered;
     
-  } catch (error) {
-    logger.error(`Error searching stocks:`, error);
+  } catch (error: any) {
+    logger.error(`Error searching stocks:`, {
+      message: error.message
+    });
     return [];
   }
 }
