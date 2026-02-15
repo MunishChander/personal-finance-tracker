@@ -5,7 +5,7 @@
 // Asset Base Model
 export interface AssetBase {
   id: string;
-  type: 'fixed-deposit' | 'savings-account';
+  type: 'fixed-deposit' | 'savings-account' | 'equity';
   bankName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -32,11 +32,29 @@ export interface SavingsAccount extends AssetBase {
   interestRate?: number; // Optional annual percentage
 }
 
+// Equity Model
+export interface Equity extends AssetBase {
+  type: 'equity';
+  bankName: string; // Broker name (Zerodha, Upstox, etc.)
+  symbol: string; // Stock ticker (e.g., RELIANCE.NS)
+  companyName: string;
+  exchange: 'NSE' | 'BSE';
+  quantity: number;
+  averagePrice: number; // Purchase price per share
+  currentPrice?: number; // Live price (fetched from API)
+  totalInvestment: number; // quantity * averagePrice
+  currentValue?: number; // quantity * currentPrice
+  gainLoss?: number; // currentValue - totalInvestment
+  gainLossPercentage?: number; // (gainLoss / totalInvestment) * 100
+  dayChange?: number; // Today's price change
+  dayChangePercentage?: number; // Today's percentage change
+}
+
 // Union Type
-export type Asset = FixedDeposit | SavingsAccount;
+export type Asset = FixedDeposit | SavingsAccount | Equity;
 
 // Asset Type
-export type AssetType = 'fixed-deposit' | 'savings-account';
+export type AssetType = 'fixed-deposit' | 'savings-account' | 'equity';
 
 // Filter Model
 export interface AssetFilters {
