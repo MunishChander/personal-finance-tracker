@@ -4,7 +4,7 @@ import { useAssets } from './hooks/useAssets';
 import { useFilters } from './hooks/useFilters';
 import { Dashboard } from './components/Dashboard';
 import { FilterPanel } from './components/FilterPanel';
-import { AssetList } from './components/AssetList';
+import { AssetTabs } from './components/AssetTabs';
 import { AssetForm } from './components/AssetForm';
 import './App.css';
 
@@ -156,8 +156,8 @@ function App() {
               }}
             />
 
-            {/* Asset List */}
-            <AssetList
+            {/* Asset Tabs with Table View */}
+            <AssetTabs
               assets={filteredAssets}
               onEdit={(asset) => setEditingAsset(asset)}
               onDelete={(assetId) => {
