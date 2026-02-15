@@ -13,7 +13,6 @@ import './AssetForm.css';
 
 type FixedDepositInput = Omit<FixedDeposit, 'id' | 'createdAt' | 'updatedAt' | 'maturityAmount' | 'daysToMaturity' | 'isMatured'>;
 type SavingsAccountInput = Omit<SavingsAccount, 'id' | 'createdAt' | 'updatedAt'>;
-type EquityInput = Omit<any, 'id' | 'createdAt' | 'updatedAt'>;
 
 interface AssetFormProps {
   assetType?: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund';
@@ -610,6 +609,107 @@ export const AssetForm: React.FC<AssetFormProps> = ({
                 placeholder="e.g., 2500.50"
               />
               {errors.averagePrice && <span className="error-message">{errors.averagePrice}</span>}
+            </div>
+          </div>
+        </>
+      )}
+      
+      {/* Conditional Fields for Mutual Fund */}
+      {assetType === 'mutual-fund' && (
+        <>
+          <div className="form-group">
+            <label htmlFor="mfSearch" className="form-label">
+              Search Mutual Fund <span className="required">*</span>
+            </label>
+            <MutualFundSearch
+              onSelect={handleMFSelect}
+              disabled={isEditMode}
+            />
+            <span className="form-hint">
+              Start typing to search for Indian mutual funds
+            </span>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="schemeCode" className="form-label">
+                Scheme Code <span className="required">*</span>
+              </label>
+              <input
+                id="schemeCode"
+                type="text"
+                className={`form-input ${errors.schemeCode ? 'form-input-error' : ''}`}
+                value={schemeCode}
+                onChange={(e) => setSchemeCode(e.target.value)}
+                placeholder="e.g., 119551"
+                readOnly={!isEditMode && schemeCode !== ''}
+              />
+              {errors.schemeCode && <span className="error-message">{errors.schemeCode}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="fundHouse" className="form-label">
+                Fund House <span className="required">*</span>
+              </label>
+              <input
+                id="fundHouse"
+                type="text"
+                className={`form-input ${errors.fundHouse ? 'form-input-error' : ''}`}
+                value={fundHouse}
+                onChange={(e) => setFundHouse(e.target.value)}
+                placeholder="e.g., SBI Mutual Fund"
+              />
+              {errors.fundHouse && <span className="error-message">{errors.fundHouse}</span>}
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="schemeName" className="form-label">
+              Scheme Name <span className="required">*</span>
+            </label>
+            <input
+              id="schemeName"
+              type="text"
+              className={`form-input ${errors.schemeName ? 'form-input-error' : ''}`}
+              value={schemeName}
+              onChange={(e) => setSchemeName(e.target.value)}
+              placeholder="e.g., SBI Bluechip Fund Direct Growth"
+              readOnly={!isEditMode && schemeName !== ''}
+            />
+            {errors.schemeName && <span className="error-message">{errors.schemeName}</span>}
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="units" className="form-label">
+                Units <span className="required">*</span>
+              </label>
+              <input
+                id="units"
+                type="number"
+                step="0.001"
+                className={`form-input ${errors.units ? 'form-input-error' : ''}`}
+                value={units}
+                onChange={(e) => setUnits(e.target.value)}
+                placeholder="e.g., 100.5"
+              />
+              {errors.units && <span className="error-message">{errors.units}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="averageNav" className="form-label">
+                Average NAV (₹) <span className="required">*</span>
+              </label>
+              <input
+                id="averageNav"
+                type="number"
+                step="0.01"
+                className={`form-input ${errors.averageNav ? 'form-input-error' : ''}`}
+                value={averageNav}
+                onChange={(e) => setAverageNav(e.target.value)}
+                placeholder="e.g., 85.50"
+              />
+              {errors.averageNav && <span className="error-message">{errors.averageNav}</span>}
             </div>
           </div>
         </>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Asset, FixedDeposit, SavingsAccount, Equity } from '@personal-finance-tracker/shared';
+import { Asset, FixedDeposit, SavingsAccount, Equity, MutualFund } from '@personal-finance-tracker/shared';
 import './AssetTabs.css';
 
 interface AssetTabsProps {
@@ -7,17 +7,20 @@ interface AssetTabsProps {
   onEdit: (asset: Asset) => void;
   onDelete: (assetId: string) => void;
   onRefreshPrices?: () => Promise<void>;
+  onRefreshMFNavs?: () => Promise<void>;
 }
 
-type TabType = 'fixed-deposits' | 'savings' | 'equities';
+type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds';
 
-export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onRefreshPrices }) => {
+export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onRefreshPrices, onRefreshMFNavs }) => {
   const [activeTab, setActiveTab] = useState<TabType>('fixed-deposits');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshingMF, setIsRefreshingMF] = useState(false);
 
   const fixedDeposits = assets.filter((a): a is FixedDeposit => a.type === 'fixed-deposit');
   const savingsAccounts = assets.filter((a): a is SavingsAccount => a.type === 'savings-account');
   const equities = assets.filter((a): a is Equity => a.type === 'equity');
+  const mutualFunds = assets.filter((a): a is MutualFund => a.type === 'mutual-fund');
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
@@ -51,6 +54,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
   const totalFDValue = fixedDeposits.reduce((sum, fd) => sum + fd.principalAmount, 0);
   const totalSavingsValue = savingsAccounts.reduce((sum, sa) => sum + sa.currentBalance, 0);
   const totalEquitiesValue = equities.reduce((sum, eq) => sum + (eq.currentValue || eq.totalInvestment), 0);
+  const totalMFValue = mutualFunds.reduce((sum, mf) => sum + (mf.currentValue || mf.totalInvestment), 0);
 
   const handleRefreshPrices = async () => {
     if (!onRefreshPrices || isRefreshing) return;
@@ -62,6 +66,19 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
       console.error('Failed to refresh prices:', error);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleRefreshMFNavs = async () => {
+    if (!onRefreshMFNavs || isRefreshingMF) return;
+    
+    setIsRefreshingMF(true);
+    try {
+      await onRefreshMFNavs();
+    } catch (error) {
+      console.error('Failed to refresh NAVs:', error);
+    } finally {
+      setIsRefreshingMF(false);
     }
   };
 
@@ -92,6 +109,14 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
           <span className="tab-icon">📈</span>
           <span className="tab-label">Equities</span>
           <span className="tab-count">{equities.length}</span>
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'mutual-funds' ? 'active' : ''}`}
+          onClick={() => setActiveTab('mutual-funds')}
+        >
+          <span className="tab-icon">📊</span>
+          <span className="tab-label">Mutual Funds</span>
+          <span className="tab-count">{mutualFunds.length}</span>
         </button>
       </div>
 
@@ -327,6 +352,111 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                             <button
                               className="btn-action btn-delete-sm"
                               onClick={() => onDelete(eq.id)}
+                              title="Delete"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mutual Funds Table */}
+      {activeTab === 'mutual-funds' && (
+        <div className="asset-section">
+          <div className="section-header">
+            <span>📊 Mutual Funds ({mutualFunds.length} holdings)</span>
+            <div className="section-header-actions">
+              {onRefreshMFNavs && mutualFunds.length > 0 && (
+                <button
+                  className="btn-refresh"
+                  onClick={handleRefreshMFNavs}
+                  disabled={isRefreshingMF}
+                  title="Refresh NAVs from MFApi"
+                >
+                  {isRefreshingMF ? '🔄 Refreshing...' : '🔄 Refresh NAVs'}
+                </button>
+              )}
+              <span className="section-value">{formatCurrency(totalMFValue)}</span>
+            </div>
+          </div>
+
+          {mutualFunds.length === 0 ? (
+            <div className="empty-state">
+              <p>No mutual funds yet. Add your first mutual fund holding to start tracking.</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="asset-table">
+                <thead>
+                  <tr>
+                    <th>Scheme Name</th>
+                    <th>Fund House</th>
+                    <th>Platform</th>
+                    <th className="text-right">Units</th>
+                    <th className="text-right">Avg NAV</th>
+                    <th className="text-right">Current NAV</th>
+                    <th className="text-right">Investment</th>
+                    <th className="text-right">Current Value</th>
+                    <th className="text-right">Gain/Loss</th>
+                    <th className="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mutualFunds.map((mf) => {
+                    const hasCurrentNav = mf.currentNav !== undefined;
+                    const gainLossClass = mf.gainLoss && mf.gainLoss > 0 ? 'positive' : mf.gainLoss && mf.gainLoss < 0 ? 'negative' : '';
+
+                    return (
+                      <tr key={mf.id}>
+                        <td>
+                          <div className="asset-name">
+                            <span className="name-primary">{mf.schemeName}</span>
+                            <span className="name-secondary">Code: {mf.schemeCode}</span>
+                          </div>
+                        </td>
+                        <td>{mf.fundHouse}</td>
+                        <td>{mf.bankName}</td>
+                        <td className="text-right">{mf.units.toFixed(3)}</td>
+                        <td className="text-right">{formatCurrency(mf.averageNav)}</td>
+                        <td className="text-right">
+                          {hasCurrentNav ? formatCurrency(mf.currentNav!) : '-'}
+                        </td>
+                        <td className="text-right">{formatCurrency(mf.totalInvestment)}</td>
+                        <td className="text-right value-cell">
+                          {mf.currentValue ? formatCurrency(mf.currentValue) : formatCurrency(mf.totalInvestment)}
+                        </td>
+                        <td className={`text-right ${gainLossClass}`}>
+                          {mf.gainLoss !== undefined ? (
+                            <div className="gain-loss">
+                              <span>{formatCurrency(Math.abs(mf.gainLoss))}</span>
+                              <span className="gain-loss-percent">
+                                ({mf.gainLossPercentage! > 0 ? '+' : ''}{mf.gainLossPercentage!.toFixed(2)}%)
+                              </span>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="text-center">
+                          <div className="action-buttons">
+                            <button
+                              className="btn-action btn-edit-sm"
+                              onClick={() => onEdit(mf)}
+                              title="Edit"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn-action btn-delete-sm"
+                              onClick={() => onDelete(mf.id)}
                               title="Delete"
                             >
                               Delete

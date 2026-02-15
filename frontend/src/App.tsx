@@ -7,7 +7,7 @@ import { AssetForm } from './components/AssetForm';
 import './App.css';
 
 function App() {
-  const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets, refreshEquityPrices } = useAssets();
+  const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets, refreshEquityPrices, refreshMutualFundNavs } = useAssets();
   
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -109,6 +109,17 @@ function App() {
     }
   };
 
+  // Handle refresh mutual fund NAVs
+  const handleRefreshMFNavs = async () => {
+    try {
+      await refreshMutualFundNavs();
+      showToast('Mutual fund NAVs refreshed successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to refresh mutual fund NAVs. Please try again.', 'error');
+      throw err;
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -185,6 +196,7 @@ function App() {
                 if (asset) setDeleteConfirmAsset(asset);
               }}
               onRefreshPrices={handleRefreshEquityPrices}
+              onRefreshMFNavs={handleRefreshMFNavs}
             />
           </>
         )}
@@ -226,7 +238,9 @@ function App() {
                 ? 'Fixed Deposit' 
                 : deleteConfirmAsset.type === 'savings-account'
                 ? 'Savings Account'
-                : 'Equity'}{' '}
+                : deleteConfirmAsset.type === 'equity'
+                ? 'Equity'
+                : 'Mutual Fund'}{' '}
               from <strong>{deleteConfirmAsset.bankName}</strong>?
             </p>
             <p className="warning-text">This action cannot be undone.</p>
