@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Asset, FixedDeposit, MutualFund, Equity } from '@personal-finance-tracker/shared';
 import './Dashboard.css';
 
@@ -6,6 +6,13 @@ interface DashboardProps {
   assets: Asset[];
   onRefreshPrices?: () => void;
   isRefreshing?: boolean;
+}
+
+interface MarketIndex {
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
 }
 
 interface DashboardStats {
@@ -18,6 +25,7 @@ interface DashboardStats {
   totalEquities: number;
   totalEquitiesInvested: number;
   totalEquitiesGainLoss: number;
+  totalEquitiesGainLossPercentage: number;
   totalMutualFunds: number;
   totalMutualFundsInvested: number;
   totalMutualFundsGainLoss: number;
@@ -77,6 +85,7 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   const totalInvested = totalFixedDeposits + totalSavingsAccounts + totalEquitiesInvested + totalMutualFundsInvested;
   const totalGainLoss = totalEquitiesGainLoss + totalMutualFundsGainLoss;
   const totalGainLossPercentage = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+  const totalEquitiesGainLossPercentage = totalEquitiesInvested > 0 ? (totalEquitiesGainLoss / totalEquitiesInvested) * 100 : 0;
 
   return {
     totalPortfolioValue,
@@ -88,6 +97,7 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
     totalEquities,
     totalEquitiesInvested,
     totalEquitiesGainLoss,
+    totalEquitiesGainLossPercentage,
     totalMutualFunds,
     totalMutualFundsInvested,
     totalMutualFundsGainLoss,
@@ -120,6 +130,28 @@ const formatCompact = (amount: number): string => {
 
 export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, isRefreshing }) => {
   const stats = calculateStats(assets);
+  const [marketIndices, setMarketIndices] = useState<MarketIndex[]>([]);
+  const [loadingIndices, setLoadingIndices] = useState(false);
+
+  // Fetch market indices on mount
+  useEffect(() => {
+    fetchMarketIndices();
+  }, []);
+
+  const fetchMarketIndices = async () => {
+    setLoadingIndices(true);
+    try {
+      const response = await fetch('http://localhost:3000/api/assets/market-indices');
+      const data = await response.json();
+      if (data.success) {
+        setMarketIndices(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching market indices:', error);
+    } finally {
+      setLoadingIndices(false);
+    }
+  };
 
   // Calculate percentages for allocation bar
   const fdPercentage = stats.totalPortfolioValue > 0 
@@ -180,6 +212,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
                 </span>
               </div>
             </div>
+            
+            {/* Market Comparison - Inline */}
+            {stats.totalEquities > 0 && (
+              <div className="hero-market-comparison">
+                <div className="market-comparison-header">
+                  <span className="market-comparison-title">Market Benchmarks</span>
+                  <button 
+                    className="btn-refresh-inline" 
+                    onClick={fetchMarketIndices}
+                    disabled={loadingIndices}
+                    title="Refresh market data"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                  </button>
+                </div>
+                <div className="market-indices-inline">
+                  {/* Your Portfolio */}
+                  <div className="market-index-inline portfolio-inline">
+                    <span className="index-label">Your Equity</span>
+                    <span className={`index-value ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
+                      {stats.totalEquitiesGainLossPercentage >= 0 ? '+' : ''}{stats.totalEquitiesGainLossPercentage.toFixed(2)}%
+                    </span>
+                  </div>
+                  
+                  {/* Market Indices */}
+                  {loadingIndices ? (
+                    <>
+                      <div className="market-index-inline">
+                        <span className="index-label skeleton skeleton-text-small"></span>
+                        <span className="index-value skeleton skeleton-text-small"></span>
+                      </div>
+                      <div className="market-index-inline">
+                        <span className="index-label skeleton skeleton-text-small"></span>
+                        <span className="index-value skeleton skeleton-text-small"></span>
+                      </div>
+                    </>
+                  ) : (
+                    marketIndices.map((index) => (
+                      <div key={index.name} className="market-index-inline">
+                        <span className="index-label">{index.name} Returns</span>
+                        <span className={`index-value ${index.changePercent >= 0 ? 'positive' : 'negative'}`}>
+                          {index.changePercent >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

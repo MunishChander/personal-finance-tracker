@@ -17,6 +17,7 @@ import {
   refreshMutualFundNavs,
   searchMutualFundSchemes,
   getMutualFundNav,
+  getMarketIndices,
 } from '../controllers/assetsController';
 
 const router = Router();
@@ -33,6 +34,9 @@ router.get('/mutualfunds/:schemeCode/nav', getMutualFundNav);
 
 // Stats endpoint must come before :id to avoid route conflicts
 router.get('/stats', getAssetStats);
+
+// Market indices endpoint
+router.get('/market-indices', getMarketIndices);
 
 // CRUD endpoints
 router.post('/', createAsset);

@@ -178,3 +178,48 @@ export async function searchStocks(query: string): Promise<any[]> {
     return [];
   }
 }
+
+/**
+ * Get market indices data (Nifty 50, Sensex)
+ */
+export async function getMarketIndices(): Promise<Map<string, { name: string; price: number; change: number; changePercent: number }>> {
+  const indices = new Map();
+  
+  // Nifty 50 and Sensex symbols
+  const symbols = ['^NSEI', '^BSESN']; // Nifty 50, Sensex
+  
+  try {
+    for (const symbol of symbols) {
+      try {
+        const result: any = await yahooFinance.quoteSummary(symbol, {
+          modules: ['price']
+        });
+        
+        const price = result?.price;
+        if (price && price.regularMarketPrice) {
+          const name = symbol === '^NSEI' ? 'Nifty 50' : 'Sensex';
+          
+          indices.set(symbol, {
+            name,
+            price: price.regularMarketPrice,
+            change: price.regularMarketChange || 0,
+            changePercent: price.regularMarketChangePercent || 0
+          });
+          
+          logger.info(`Fetched ${name} data`, { 
+            price: price.regularMarketPrice, 
+            change: price.regularMarketChange,
+            changePercent: price.regularMarketChangePercent 
+          });
+        }
+      } catch (error: any) {
+        logger.warn(`Failed to fetch ${symbol}`, { message: error.message });
+      }
+    }
+    
+    return indices;
+  } catch (error: any) {
+    logger.error('Error fetching market indices', { message: error.message });
+    return indices;
+  }
+}

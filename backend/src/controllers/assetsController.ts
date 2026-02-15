@@ -23,6 +23,7 @@ import {
 } from '@personal-finance-tracker/shared';
 import { getStockQuote, getMultipleStockQuotes } from '../services/yahooFinanceService.js';
 import { getMFQuote, getMultipleMFQuotes } from '../services/mfApiService.js';
+import { getMarketIndices as getMarketIndicesService } from '../services/yahooFinanceService.js';
 
 /**
  * Helper function to convert database row to Asset object
@@ -972,6 +973,34 @@ export async function getStockPrice(req: Request, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       error: 'Failed to fetch stock price',
+    });
+  }
+}
+
+/**
+ * GET /api/assets/market-indices
+ * Get market indices (Nifty 50, Sensex)
+ */
+export async function getMarketIndices(req: Request, res: Response): Promise<void> {
+  try {
+    logger.info('Fetching market indices');
+
+    const indices = await getMarketIndicesService();
+    
+    const result = Array.from(indices.values());
+
+    logger.info('Market indices fetched successfully', { count: result.length });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Error fetching market indices', {}, error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch market indices',
     });
   }
 }
