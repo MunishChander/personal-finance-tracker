@@ -19,14 +19,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     });
   };
 
-  const handleBankNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.trim();
-    onFilterChange({
-      ...filters,
-      bankName: value === '' ? null : value,
-    });
-  };
-
   const handleClearFilters = () => {
     onFilterChange({
       assetType: null,
@@ -34,7 +26,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     });
   };
 
-  const hasActiveFilters = filters.assetType !== null || filters.bankName !== null;
+  const hasActiveFilters = filters.assetType !== null;
 
   return (
     <div className="filter-panel">
@@ -56,21 +48,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             <option value="fixed-deposit">Fixed Deposit</option>
             <option value="savings-account">Savings Account</option>
           </select>
-        </div>
-
-        {/* Bank Name Filter */}
-        <div className="filter-group">
-          <label htmlFor="bankNameFilter" className="filter-label">
-            Bank Name
-          </label>
-          <input
-            id="bankNameFilter"
-            type="text"
-            className="filter-input"
-            value={filters.bankName || ''}
-            onChange={handleBankNameChange}
-            placeholder="Enter bank name"
-          />
         </div>
 
         {/* Clear Filters Button */}
