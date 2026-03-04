@@ -14,8 +14,8 @@
 
 .mf-search-input:focus {
   outline: none;
-  border-color: #6c3cb5;
-  box-shadow: 0 0 0 3px rgba(108, 60, 181, 0.1);
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
 }
 
 .mf-search-input:disabled {
@@ -59,7 +59,7 @@
 
 .mf-search-result:hover,
 .mf-search-result.selected {
-  background-color: #f8f5ff;
+  background-color: #ecfeff;
 }
 
 .mf-result-name {

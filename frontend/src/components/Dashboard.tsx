@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Asset, FixedDeposit, MutualFund, Equity, calculateAnnualizedReturn } from '@personal-finance-tracker/shared';
+import { Asset, FixedDeposit, MutualFund, Equity, ProvidentFund, calculateAnnualizedReturn, calculateFDCurrentValue } from '@personal-finance-tracker/shared';
 import './Dashboard.css';
+
+type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds' | 'provident-funds';
 
 interface DashboardProps {
   assets: Asset[];
   onRefreshPrices?: () => void;
   isRefreshing?: boolean;
+  showAmounts: boolean;
+  onAllocationCardClick?: (tab: TabType) => void;
 }
 
 interface MarketIndex {
@@ -29,19 +33,23 @@ interface DashboardStats {
   totalMutualFunds: number;
   totalMutualFundsInvested: number;
   totalMutualFundsGainLoss: number;
+  totalProvidentFunds: number;
   fixedDepositCount: number;
   savingsAccountCount: number;
   equityCount: number;
   mutualFundCount: number;
+  providentFundCount: number;
   maturingSoonCount: number;
   fdAverageReturn: number;
   savingsAverageReturn: number;
+  pfAverageRate: number;
   equityXIRR: number | null;
   mfXIRR: number | null;
 }
 
 const calculateStats = (assets: Asset[]): DashboardStats => {
   let totalFixedDeposits = 0;
+  let totalFixedDepositsPrincipal = 0;
   let totalSavingsAccounts = 0;
   let totalEquities = 0;
   let totalEquitiesInvested = 0;
@@ -49,16 +57,19 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   let totalMutualFunds = 0;
   let totalMutualFundsInvested = 0;
   let totalMutualFundsGainLoss = 0;
+  let totalProvidentFunds = 0;
   let fixedDepositCount = 0;
   let savingsAccountCount = 0;
   let equityCount = 0;
   let mutualFundCount = 0;
+  let providentFundCount = 0;
   let maturingSoonCount = 0;
   
   // For average returns
   let fdTotalInterestRate = 0;
   let savingsTotalInterestRate = 0;
   let savingsWithInterestCount = 0;
+  let pfTotalInterestRate = 0;
   
   // For XIRR calculation
   const equityCashFlows: Array<{ date: Date; amount: number }> = [];
@@ -67,7 +78,15 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   assets.forEach((asset) => {
     if (asset.type === 'fixed-deposit') {
       const fd = asset as FixedDeposit;
-      totalFixedDeposits += fd.principalAmount;
+      // Calculate current value for portfolio total
+      const currentValue = calculateFDCurrentValue(
+        fd.principalAmount,
+        fd.interestRate,
+        fd.startDate,
+        fd.maturityDate
+      );
+      totalFixedDeposits += currentValue;
+      totalFixedDepositsPrincipal += fd.principalAmount;
       fixedDepositCount++;
       fdTotalInterestRate += fd.interestRate;
       
@@ -116,11 +135,16 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
         date: new Date(),
         amount: currentValue
       });
+    } else if (asset.type === 'provident-fund') {
+      const pf = asset as ProvidentFund;
+      totalProvidentFunds += pf.currentBalance;
+      providentFundCount++;
+      pfTotalInterestRate += pf.interestRate;
     }
   });
 
-  const totalPortfolioValue = totalFixedDeposits + totalSavingsAccounts + totalEquities + totalMutualFunds;
-  const totalInvested = totalFixedDeposits + totalSavingsAccounts + totalEquitiesInvested + totalMutualFundsInvested;
+  const totalPortfolioValue = totalFixedDeposits + totalSavingsAccounts + totalEquities + totalMutualFunds + totalProvidentFunds;
+  const totalInvested = totalFixedDepositsPrincipal + totalSavingsAccounts + totalEquitiesInvested + totalMutualFundsInvested + totalProvidentFunds;
   const totalGainLoss = totalEquitiesGainLoss + totalMutualFundsGainLoss;
   const totalGainLossPercentage = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
   const totalEquitiesGainLossPercentage = totalEquitiesInvested > 0 ? (totalEquitiesGainLoss / totalEquitiesInvested) * 100 : 0;
@@ -128,6 +152,7 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
   // Calculate average returns
   const fdAverageReturn = fixedDepositCount > 0 ? fdTotalInterestRate / fixedDepositCount : 0;
   const savingsAverageReturn = savingsWithInterestCount > 0 ? savingsTotalInterestRate / savingsWithInterestCount : 0;
+  const pfAverageRate = providentFundCount > 0 ? pfTotalInterestRate / providentFundCount : 0;
   
   // Calculate XIRR for equities and mutual funds
   const equityXIRR = equityCashFlows.length >= 2 ? calculateAnnualizedReturn(
@@ -156,13 +181,16 @@ const calculateStats = (assets: Asset[]): DashboardStats => {
     totalMutualFunds,
     totalMutualFundsInvested,
     totalMutualFundsGainLoss,
+    totalProvidentFunds,
     fixedDepositCount,
     savingsAccountCount,
     equityCount,
     mutualFundCount,
+    providentFundCount,
     maturingSoonCount,
     fdAverageReturn,
     savingsAverageReturn,
+    pfAverageRate,
     equityXIRR,
     mfXIRR,
   };
@@ -176,18 +204,16 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-const formatCompact = (amount: number): string => {
-  if (amount >= 10000000) {
-    return `₹${(amount / 10000000).toFixed(2)}Cr`;
-  } else if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(2)}L`;
-  } else if (amount >= 1000) {
-    return `₹${(amount / 1000).toFixed(1)}K`;
-  }
-  return formatCurrency(amount);
+const maskAmount = (): string => {
+  return '₹••••••';
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, isRefreshing }) => {
+const displayAmount = (amount: number, showAmounts: boolean): string => {
+  const formatted = formatCurrency(amount);
+  return showAmounts ? formatted : maskAmount();
+};
+
+export const Dashboard: React.FC<DashboardProps> = ({ assets, showAmounts, onAllocationCardClick }) => {
   const stats = calculateStats(assets);
   const [marketIndices, setMarketIndices] = useState<MarketIndex[]>([]);
   const [loadingIndices, setLoadingIndices] = useState(false);
@@ -225,100 +251,111 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
   const mfPercentage = stats.totalPortfolioValue > 0 
     ? (stats.totalMutualFunds / stats.totalPortfolioValue) * 100 
     : 0;
+  const pfPercentage = stats.totalPortfolioValue > 0 
+    ? (stats.totalProvidentFunds / stats.totalPortfolioValue) * 100 
+    : 0;
 
   return (
     <div className="dashboard-container">
       {/* Hero Section */}
       <div className="dashboard-hero">
         <div className="hero-content">
-          <div className="hero-header">
-            <div>
-              <h1 className="hero-title">Portfolio Overview</h1>
-              <p className="hero-subtitle">Track your wealth across all investments</p>
-            </div>
-            {onRefreshPrices && (
-              <button 
-                className={`btn-refresh ${isRefreshing ? 'refreshing' : ''}`}
-                onClick={onRefreshPrices}
-                disabled={isRefreshing}
-                title="Refresh live prices"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                </svg>
-                {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
-              </button>
-            )}
-          </div>
-          
-          <div className="hero-stats">
-            <div className="hero-main-stat">
-              <span className="hero-label">Total Portfolio Value</span>
-              <span className="hero-value">{formatCurrency(stats.totalPortfolioValue)}</span>
-            </div>
-            <div className="hero-secondary-stats">
-              <div className="hero-stat-item">
-                <span className="stat-label">Total Invested</span>
-                <span className="stat-value">{formatCurrency(stats.totalInvested)}</span>
+          <div className="hero-layout">
+            {/* Left Side - Main Stats */}
+            <div className="hero-left">
+              <div className="hero-header">
+                <div>
+                  <h1 className="hero-title">Portfolio Overview</h1>
+                  <p className="hero-subtitle">Track your wealth across all investments</p>
+                </div>
               </div>
-              <div className="hero-stat-item">
-                <span className="stat-label">Total Returns</span>
-                <span className={`stat-value ${stats.totalGainLoss >= 0 ? 'positive' : 'negative'}`}>
-                  {stats.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(stats.totalGainLoss)}
-                  <span className="stat-percentage">
-                    ({stats.totalGainLossPercentage >= 0 ? '+' : ''}{stats.totalGainLossPercentage.toFixed(2)}%)
-                  </span>
-                </span>
+              
+              <div className="hero-stats-compact">
+                <div className="hero-main-stat">
+                  <span className="hero-label">Total Portfolio Value</span>
+                  <span className="hero-value">{displayAmount(stats.totalPortfolioValue, showAmounts)}</span>
+                </div>
+                <div className="hero-secondary-stats-compact">
+                  <div className="hero-stat-item-compact">
+                    <span className="stat-label-compact">Invested</span>
+                    <span className="stat-value-compact">{displayAmount(stats.totalInvested, showAmounts)}</span>
+                  </div>
+                  <div className="hero-stat-item-compact">
+                    <span className="stat-label-compact">Returns</span>
+                    <span className={`stat-value-compact ${stats.totalGainLoss >= 0 ? 'positive' : 'negative'}`}>
+                      {showAmounts ? (
+                        <>
+                          {stats.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(stats.totalGainLoss)}
+                          <span className="stat-percentage-compact">
+                            ({stats.totalGainLossPercentage >= 0 ? '+' : ''}{stats.totalGainLossPercentage.toFixed(2)}%)
+                          </span>
+                        </>
+                      ) : (
+                        '₹••••••'
+                      )}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
             
-            {/* Market Comparison - Inline */}
+            {/* Right Side - Market Benchmarks */}
             {stats.totalEquities > 0 && (
-              <div className="hero-market-comparison">
-                <div className="market-comparison-header">
-                  <span className="market-comparison-title">Market Benchmarks</span>
-                  <button 
-                    className="btn-refresh-inline" 
-                    onClick={fetchMarketIndices}
-                    disabled={loadingIndices}
-                    title="Refresh market data"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                    </svg>
-                  </button>
-                </div>
-                <div className="market-indices-inline">
-                  {/* Your Portfolio */}
-                  <div className="market-index-inline portfolio-inline">
-                    <span className="index-label">Your Equity</span>
-                    <span className={`index-value ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
-                      {stats.totalEquitiesGainLossPercentage >= 0 ? '+' : ''}{stats.totalEquitiesGainLossPercentage.toFixed(2)}%
-                    </span>
+              <div className="hero-right">
+                <div className="market-benchmarks">
+                  <div className="benchmarks-header">
+                    <span className="benchmarks-title">Market Benchmarks</span>
+                    <button 
+                      className="btn-refresh-inline" 
+                      onClick={fetchMarketIndices}
+                      disabled={loadingIndices}
+                      title="Refresh market data"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                      </svg>
+                    </button>
                   </div>
-                  
-                  {/* Market Indices */}
-                  {loadingIndices ? (
-                    <>
-                      <div className="market-index-inline">
-                        <span className="index-label skeleton skeleton-text-small"></span>
-                        <span className="index-value skeleton skeleton-text-small"></span>
-                      </div>
-                      <div className="market-index-inline">
-                        <span className="index-label skeleton skeleton-text-small"></span>
-                        <span className="index-value skeleton skeleton-text-small"></span>
-                      </div>
-                    </>
-                  ) : (
-                    marketIndices.map((index) => (
-                      <div key={index.name} className="market-index-inline">
-                        <span className="index-label">{index.name} Returns</span>
-                        <span className={`index-value ${index.changePercent >= 0 ? 'positive' : 'negative'}`}>
-                          {index.changePercent >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-                    ))
-                  )}
+                  <div className="benchmarks-grid">
+                    {/* Your Portfolio */}
+                    <div className="benchmark-item portfolio-benchmark">
+                      <span className="benchmark-label">Your Equity</span>
+                      <span className={`benchmark-value ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
+                        {showAmounts ? (
+                          `${stats.totalEquitiesGainLossPercentage >= 0 ? '+' : ''}${stats.totalEquitiesGainLossPercentage.toFixed(2)}%`
+                        ) : (
+                          '••••%'
+                        )}
+                      </span>
+                    </div>
+                    
+                    {/* Market Indices */}
+                    {loadingIndices ? (
+                      <>
+                        <div className="benchmark-item">
+                          <span className="benchmark-label skeleton skeleton-text-small"></span>
+                          <span className="benchmark-value skeleton skeleton-text-small"></span>
+                        </div>
+                        <div className="benchmark-item">
+                          <span className="benchmark-label skeleton skeleton-text-small"></span>
+                          <span className="benchmark-value skeleton skeleton-text-small"></span>
+                        </div>
+                      </>
+                    ) : (
+                      marketIndices.map((index) => (
+                        <div key={index.name} className="benchmark-item">
+                          <span className="benchmark-label">{index.name} Returns</span>
+                          <span className={`benchmark-value ${index.changePercent >= 0 ? 'positive' : 'negative'}`}>
+                            {showAmounts ? (
+                              `${index.changePercent >= 0 ? '+' : ''}${index.changePercent.toFixed(2)}%`
+                            ) : (
+                              '••••%'
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -326,9 +363,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
         </div>
       </div>
 
-      {/* Asset Allocation Bar */}
+      {/* Asset Allocation Section */}
       <div className="allocation-section">
         <h3 className="section-title">Asset Allocation</h3>
+        
+        {/* Allocation Bar */}
         <div className="allocation-bar">
           {fdPercentage > 0 && (
             <div 
@@ -358,133 +397,246 @@ export const Dashboard: React.FC<DashboardProps> = ({ assets, onRefreshPrices, i
               title={`Mutual Funds: ${mfPercentage.toFixed(1)}%`}
             />
           )}
+          {pfPercentage > 0 && (
+            <div 
+              className="allocation-segment pf" 
+              style={{ width: `${pfPercentage}%` }}
+              title={`Provident Fund: ${pfPercentage.toFixed(1)}%`}
+            />
+          )}
         </div>
-        <div className="allocation-legend">
-          <div className="legend-item">
-            <span className="legend-dot fd"></span>
-            <span>Fixed Deposits {fdPercentage.toFixed(1)}%</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot savings"></span>
-            <span>Savings {savingsPercentage.toFixed(1)}%</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot equity"></span>
-            <span>Equities {equitiesPercentage.toFixed(1)}%</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-dot mf"></span>
-            <span>Mutual Funds {mfPercentage.toFixed(1)}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards Grid */}
-      <div className="stats-grid">
-        {/* Fixed Deposits Card */}
-        <div className="stat-card fd-card">
-          <div className="card-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="7" width="20" height="14" rx="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-          </div>
-          <div className="card-content">
-            <h4 className="card-title">Fixed Deposits</h4>
-            <p className="card-value">{formatCompact(stats.totalFixedDeposits)}</p>
-            <p className="card-subtitle">{stats.fixedDepositCount} {stats.fixedDepositCount === 1 ? 'deposit' : 'deposits'}</p>
-            {stats.maturingSoonCount > 0 && (
-              <div className="card-alert">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                </svg>
-                {stats.maturingSoonCount} maturing soon
+        
+        {/* Detailed Allocation Cards */}
+        <div className="allocation-details-grid">
+          {/* Fixed Deposits */}
+          {stats.fixedDepositCount > 0 && (
+            <div 
+              className="allocation-detail-card fd-card clickable-card" 
+              onClick={() => onAllocationCardClick?.('fixed-deposits')}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="allocation-card-header">
+                <div className="allocation-card-icon fd-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  </svg>
+                </div>
+                <div className="allocation-card-title-section">
+                  <h4 className="allocation-card-title">Fixed Deposits</h4>
+                  <span className="allocation-card-percentage">{fdPercentage.toFixed(1)}%</span>
+                </div>
               </div>
-            )}
-            {stats.fdAverageReturn > 0 && (
-              <div className="card-metric">
-                <span className="metric-label">Avg. Return:</span>
-                <span className="metric-value">{stats.fdAverageReturn.toFixed(2)}% p.a.</span>
+              <div className="allocation-card-stats">
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Current Value</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalFixedDeposits, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Avg. Return</span>
+                  <span className="allocation-stat-value">{stats.fdAverageReturn.toFixed(2)}% p.a.</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Count</span>
+                  <span className="allocation-stat-value">{stats.fixedDepositCount} {stats.fixedDepositCount === 1 ? 'deposit' : 'deposits'}</span>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Savings Card */}
-        <div className="stat-card savings-card">
-          <div className="card-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-          </div>
-          <div className="card-content">
-            <h4 className="card-title">Savings Accounts</h4>
-            <p className="card-value">{formatCompact(stats.totalSavingsAccounts)}</p>
-            <p className="card-subtitle">{stats.savingsAccountCount} {stats.savingsAccountCount === 1 ? 'account' : 'accounts'}</p>
-            {stats.savingsAverageReturn > 0 && (
-              <div className="card-metric">
-                <span className="metric-label">Avg. Interest:</span>
-                <span className="metric-value">{stats.savingsAverageReturn.toFixed(2)}% p.a.</span>
+            </div>
+          )}
+          
+          {/* Savings Accounts */}
+          {stats.savingsAccountCount > 0 && (
+            <div 
+              className="allocation-detail-card savings-card clickable-card" 
+              onClick={() => onAllocationCardClick?.('savings')}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="allocation-card-header">
+                <div className="allocation-card-icon savings-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                </div>
+                <div className="allocation-card-title-section">
+                  <h4 className="allocation-card-title">Savings Accounts</h4>
+                  <span className="allocation-card-percentage">{savingsPercentage.toFixed(1)}%</span>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Equities Card */}
-        <div className="stat-card equity-card">
-          <div className="card-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-          </div>
-          <div className="card-content">
-            <h4 className="card-title">Equities</h4>
-            <p className="card-value">{formatCompact(stats.totalEquities)}</p>
-            <p className="card-subtitle">{stats.equityCount} {stats.equityCount === 1 ? 'stock' : 'stocks'}</p>
-            {stats.totalEquitiesGainLoss !== 0 && (
-              <p className={`card-returns ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
-                {stats.totalEquitiesGainLoss >= 0 ? '+' : ''}{formatCompact(stats.totalEquitiesGainLoss)}
-              </p>
-            )}
-            {stats.equityXIRR !== null && (
-              <div className="card-metric">
-                <span className="metric-label">XIRR:</span>
-                <span className={`metric-value ${stats.equityXIRR >= 0 ? 'positive' : 'negative'}`}>
-                  {stats.equityXIRR >= 0 ? '+' : ''}{(stats.equityXIRR * 100).toFixed(2)}% p.a.
-                </span>
+              <div className="allocation-card-stats">
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Current Balance</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalSavingsAccounts, showAmounts)}</span>
+                </div>
+                {stats.savingsAverageReturn > 0 && (
+                  <div className="allocation-stat-row">
+                    <span className="allocation-stat-label">Avg. Interest</span>
+                    <span className="allocation-stat-value">{stats.savingsAverageReturn.toFixed(2)}% p.a.</span>
+                  </div>
+                )}
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Count</span>
+                  <span className="allocation-stat-value">{stats.savingsAccountCount} {stats.savingsAccountCount === 1 ? 'account' : 'accounts'}</span>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mutual Funds Card */}
-        <div className="stat-card mf-card">
-          <div className="card-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-          </div>
-          <div className="card-content">
-            <h4 className="card-title">Mutual Funds</h4>
-            <p className="card-value">{formatCompact(stats.totalMutualFunds)}</p>
-            <p className="card-subtitle">{stats.mutualFundCount} {stats.mutualFundCount === 1 ? 'fund' : 'funds'}</p>
-            {stats.totalMutualFundsGainLoss !== 0 && (
-              <p className={`card-returns ${stats.totalMutualFundsGainLoss >= 0 ? 'positive' : 'negative'}`}>
-                {stats.totalMutualFundsGainLoss >= 0 ? '+' : ''}{formatCompact(stats.totalMutualFundsGainLoss)}
-              </p>
-            )}
-            {stats.mfXIRR !== null && (
-              <div className="card-metric">
-                <span className="metric-label">XIRR:</span>
-                <span className={`metric-value ${stats.mfXIRR >= 0 ? 'positive' : 'negative'}`}>
-                  {stats.mfXIRR >= 0 ? '+' : ''}{(stats.mfXIRR * 100).toFixed(2)}% p.a.
-                </span>
+            </div>
+          )}
+          
+          {/* Equities */}
+          {stats.equityCount > 0 && (
+            <div 
+              className="allocation-detail-card equity-card clickable-card" 
+              onClick={() => onAllocationCardClick?.('equities')}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="allocation-card-header">
+                <div className="allocation-card-icon equity-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <div className="allocation-card-title-section">
+                  <h4 className="allocation-card-title">Equities</h4>
+                  <span className="allocation-card-percentage">{equitiesPercentage.toFixed(1)}%</span>
+                </div>
               </div>
-            )}
-          </div>
+              <div className="allocation-card-stats">
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Invested</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalEquitiesInvested, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Current Value</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalEquities, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Returns</span>
+                  <span className={`allocation-stat-value ${stats.totalEquitiesGainLoss >= 0 ? 'positive' : 'negative'}`}>
+                    {showAmounts ? (
+                      <>
+                        {stats.totalEquitiesGainLoss >= 0 ? '+' : ''}{formatCurrency(stats.totalEquitiesGainLoss)}
+                        <span className="allocation-stat-percent">
+                          ({stats.totalEquitiesGainLossPercentage >= 0 ? '+' : ''}{stats.totalEquitiesGainLossPercentage.toFixed(2)}%)
+                        </span>
+                      </>
+                    ) : (
+                      '₹••••••'
+                    )}
+                  </span>
+                </div>
+                {stats.equityXIRR !== null && !isNaN(stats.equityXIRR) && isFinite(stats.equityXIRR) && Math.abs(stats.equityXIRR) < 10 && (
+                  <div className="allocation-stat-row">
+                    <span className="allocation-stat-label">XIRR</span>
+                    <span className={`allocation-stat-value ${stats.equityXIRR >= 0 ? 'positive' : 'negative'}`}>
+                      {showAmounts ? (
+                        `${stats.equityXIRR >= 0 ? '+' : ''}${(stats.equityXIRR * 100).toFixed(2)}% p.a.`
+                      ) : (
+                        '••••% p.a.'
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Mutual Funds */}
+          {stats.mutualFundCount > 0 && (
+            <div 
+              className="allocation-detail-card mf-card clickable-card" 
+              onClick={() => onAllocationCardClick?.('mutual-funds')}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="allocation-card-header">
+                <div className="allocation-card-icon mf-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                  </svg>
+                </div>
+                <div className="allocation-card-title-section">
+                  <h4 className="allocation-card-title">Mutual Funds</h4>
+                  <span className="allocation-card-percentage">{mfPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+              <div className="allocation-card-stats">
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Invested</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalMutualFundsInvested, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Current Value</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalMutualFunds, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Returns</span>
+                  <span className={`allocation-stat-value ${stats.totalMutualFundsGainLoss >= 0 ? 'positive' : 'negative'}`}>
+                    {showAmounts ? (
+                      <>
+                        {stats.totalMutualFundsGainLoss >= 0 ? '+' : ''}{formatCurrency(stats.totalMutualFundsGainLoss)}
+                        <span className="allocation-stat-percent">
+                          ({(stats.totalMutualFundsInvested > 0 ? (stats.totalMutualFundsGainLoss / stats.totalMutualFundsInvested) * 100 : 0).toFixed(2)}%)
+                        </span>
+                      </>
+                    ) : (
+                      '₹••••••'
+                    )}
+                  </span>
+                </div>
+                {stats.mfXIRR !== null && !isNaN(stats.mfXIRR) && isFinite(stats.mfXIRR) && Math.abs(stats.mfXIRR) < 10 && (
+                  <div className="allocation-stat-row">
+                    <span className="allocation-stat-label">XIRR</span>
+                    <span className={`allocation-stat-value ${stats.mfXIRR >= 0 ? 'positive' : 'negative'}`}>
+                      {showAmounts ? (
+                        `${stats.mfXIRR >= 0 ? '+' : ''}${(stats.mfXIRR * 100).toFixed(2)}% p.a.`
+                      ) : (
+                        '••••% p.a.'
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Provident Fund */}
+          {stats.providentFundCount > 0 && (
+            <div 
+              className="allocation-detail-card pf-card clickable-card" 
+              onClick={() => onAllocationCardClick?.('provident-funds')}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="allocation-card-header">
+                <div className="allocation-card-icon pf-icon">
+                  🏛️
+                </div>
+                <div className="allocation-card-title-section">
+                  <h4 className="allocation-card-title">Provident Fund</h4>
+                  <span className="allocation-card-percentage">{pfPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+              <div className="allocation-card-stats">
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Current Balance</span>
+                  <span className="allocation-stat-value">{displayAmount(stats.totalProvidentFunds, showAmounts)}</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Avg. Interest</span>
+                  <span className="allocation-stat-value">{stats.pfAverageRate.toFixed(2)}% p.a.</span>
+                </div>
+                <div className="allocation-stat-row">
+                  <span className="allocation-stat-label">Count</span>
+                  <span className="allocation-stat-value">{stats.providentFundCount} {stats.providentFundCount === 1 ? 'account' : 'accounts'}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,0 +1,10 @@
+{
+  "type": "provident-fund",
+  "bankName": "Test Company",
+  "uan": "123456789012",
+  "currentBalance": 100000,
+  "monthlyContributionEmployee": 1800,
+  "monthlyContributionEmployer": 1800,
+  "interestRate": 8.25,
+  "lastUpdatedDate": "2024-02-15"
+}

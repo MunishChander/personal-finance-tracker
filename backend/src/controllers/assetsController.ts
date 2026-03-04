@@ -19,6 +19,7 @@ import {
   SavingsAccount,
   Equity,
   MutualFund,
+  ProvidentFund,
   DashboardStats,
 } from '@personal-finance-tracker/shared';
 import { getStockQuote, getMultipleStockQuotes } from '../services/yahooFinanceService.js';
@@ -93,7 +94,7 @@ function rowToAsset(row: any): Asset {
       gainLoss,
       gainLossPercentage,
     } as Equity;
-  } else {
+  } else if (row.type === 'mutual-fund') {
     // Mutual Fund
     const units = parseFloat(row.units);
     const averageNav = parseFloat(row.average_nav);
@@ -117,6 +118,33 @@ function rowToAsset(row: any): Asset {
       gainLoss,
       gainLossPercentage,
     } as MutualFund;
+  } else {
+    // Provident Fund
+    const currentBalance = parseFloat(row.current_balance);
+    const monthlyContributionEmployee = parseFloat(row.monthly_contribution_employee);
+    const monthlyContributionEmployer = parseFloat(row.monthly_contribution_employer);
+    const interestRate = parseFloat(row.interest_rate);
+    const lastUpdatedDate = new Date(row.last_updated_date);
+    
+    // Calculate projected balance (simple projection for 1 year)
+    const monthlyContribution = monthlyContributionEmployee + monthlyContributionEmployer;
+    const annualContribution = monthlyContribution * 12;
+    const annualInterest = currentBalance * (interestRate / 100);
+    const projectedBalance = currentBalance + annualContribution + annualInterest;
+    const projectedAnnualGrowth = annualContribution + annualInterest;
+
+    return {
+      ...base,
+      type: 'provident-fund',
+      uan: row.uan,
+      currentBalance,
+      monthlyContributionEmployee,
+      monthlyContributionEmployer,
+      interestRate,
+      lastUpdatedDate,
+      projectedBalance,
+      projectedAnnualGrowth,
+    } as ProvidentFund;
   }
 }
 
@@ -127,6 +155,12 @@ function rowToAsset(row: any): Asset {
 export async function createAsset(req: Request, res: Response): Promise<void> {
   try {
     const assetInput: AssetInput = req.body;
+    
+    logger.info('Creating asset - received data', { 
+      type: assetInput.type, 
+      typeOf: typeof assetInput.type,
+      body: JSON.stringify(req.body, null, 2)
+    });
 
     // Validate based on asset type
     let validationResult;
@@ -141,18 +175,61 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
         isValid: !!(equity.symbol && equity.companyName && equity.exchange && equity.quantity && equity.averagePrice),
         errors: []
       };
-    } else {
+    } else if (assetInput.type === 'mutual-fund') {
       // Basic mutual fund validation
       const mf = assetInput as Partial<MutualFund>;
       validationResult = {
         isValid: !!(mf.schemeCode && mf.schemeName && mf.fundHouse && mf.units && mf.averageNav),
         errors: []
       };
+    } else if (assetInput.type === 'provident-fund') {
+      // Basic provident fund validation
+      const pf = assetInput as Partial<ProvidentFund>;
+      const errors = [];
+      
+      logger.info('PF validation - checking fields', {
+        hasUan: !!pf.uan,
+        uan: pf.uan,
+        hasCurrentBalance: pf.currentBalance !== undefined,
+        currentBalance: pf.currentBalance,
+        hasMonthlyEmployee: pf.monthlyContributionEmployee !== undefined,
+        monthlyEmployee: pf.monthlyContributionEmployee,
+        hasMonthlyEmployer: pf.monthlyContributionEmployer !== undefined,
+        monthlyEmployer: pf.monthlyContributionEmployer,
+        hasInterestRate: !!pf.interestRate,
+        interestRate: pf.interestRate,
+        hasBankName: !!pf.bankName,
+        bankName: pf.bankName
+      });
+      
+      if (!pf.uan) errors.push({ field: 'uan', message: 'UAN is required' });
+      if (pf.currentBalance === undefined) errors.push({ field: 'currentBalance', message: 'Current balance is required' });
+      if (pf.monthlyContributionEmployee === undefined) errors.push({ field: 'monthlyContributionEmployee', message: 'Employee contribution is required' });
+      if (pf.monthlyContributionEmployer === undefined) errors.push({ field: 'monthlyContributionEmployer', message: 'Employer contribution is required' });
+      if (!pf.interestRate) errors.push({ field: 'interestRate', message: 'Interest rate is required' });
+      if (!pf.bankName) errors.push({ field: 'bankName', message: 'Employer name is required' });
+      
+      logger.info('PF validation result', { 
+        errorsCount: errors.length,
+        errors,
+        isValid: errors.length === 0
+      });
+      
+      validationResult = {
+        isValid: errors.length === 0,
+        errors
+      };
+    } else {
+      validationResult = {
+        isValid: false,
+        errors: [{ field: 'type', message: 'Invalid asset type' }]
+      };
     }
 
     if (!validationResult.isValid) {
       logger.warn('Asset validation failed', { 
         type: assetInput.type,
+        body: req.body,
         errors: validationResult.errors 
       });
       res.status(400).json({
@@ -257,7 +334,7 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           ]
         );
       }
-    } else {
+    } else if (assetInput.type === 'mutual-fund') {
       // Mutual Fund - Check for existing holding with same scheme code and platform
       const mf = assetInput as Partial<MutualFund>;
       
@@ -316,6 +393,33 @@ export async function createAsset(req: Request, res: Response): Promise<void> {
           ]
         );
       }
+    } else if (assetInput.type === 'provident-fund') {
+      // Provident Fund
+      const pf = assetInput as Partial<ProvidentFund>;
+      result = await pool.query(
+        `INSERT INTO assets (
+          type, bank_name, uan, current_balance, 
+          monthly_contribution_employee, monthly_contribution_employer,
+          interest_rate, last_updated_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *`,
+        [
+          'provident-fund',
+          pf.bankName, // Employer name
+          pf.uan,
+          pf.currentBalance,
+          pf.monthlyContributionEmployee,
+          pf.monthlyContributionEmployer,
+          pf.interestRate || 8.25, // Default to current EPF rate
+          pf.lastUpdatedDate || new Date()
+        ]
+      );
+      
+      logger.info('Provident Fund created', {
+        uan: pf.uan,
+        employer: pf.bankName,
+        balance: pf.currentBalance
+      });
     }
 
     const createdAsset = rowToAsset(result.rows[0]);
@@ -455,12 +559,40 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
       validationResult = validateFixedDeposit(assetInput);
     } else if (assetInput.type === 'savings-account') {
       validationResult = validateSavingsAccount(assetInput);
-    } else {
+    } else if (assetInput.type === 'equity') {
       // Basic equity validation
       const equity = assetInput as Partial<Equity>;
       validationResult = {
         isValid: !!(equity.symbol && equity.companyName && equity.exchange && equity.quantity && equity.averagePrice),
         errors: []
+      };
+    } else if (assetInput.type === 'mutual-fund') {
+      // Basic mutual fund validation
+      const mf = assetInput as Partial<MutualFund>;
+      validationResult = {
+        isValid: !!(mf.schemeCode && mf.schemeName && mf.fundHouse && mf.units && mf.averageNav),
+        errors: []
+      };
+    } else if (assetInput.type === 'provident-fund') {
+      // Basic provident fund validation
+      const pf = assetInput as Partial<ProvidentFund>;
+      const errors = [];
+      
+      if (!pf.uan) errors.push({ field: 'uan', message: 'UAN is required' });
+      if (pf.currentBalance === undefined) errors.push({ field: 'currentBalance', message: 'Current balance is required' });
+      if (pf.monthlyContributionEmployee === undefined) errors.push({ field: 'monthlyContributionEmployee', message: 'Employee contribution is required' });
+      if (pf.monthlyContributionEmployer === undefined) errors.push({ field: 'monthlyContributionEmployer', message: 'Employer contribution is required' });
+      if (!pf.interestRate) errors.push({ field: 'interestRate', message: 'Interest rate is required' });
+      if (!pf.bankName) errors.push({ field: 'bankName', message: 'Employer name is required' });
+      
+      validationResult = {
+        isValid: errors.length === 0,
+        errors
+      };
+    } else {
+      validationResult = {
+        isValid: false,
+        errors: [{ field: 'type', message: 'Invalid asset type' }]
       };
     }
 
@@ -524,7 +656,7 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
           id,
         ]
       );
-    } else {
+    } else if (assetInput.type === 'equity') {
       // Equity
       const equity = assetInput as Partial<Equity>;
       result = await pool.query(
@@ -545,6 +677,61 @@ export async function updateAsset(req: Request, res: Response): Promise<void> {
           equity.exchange,
           equity.quantity,
           equity.averagePrice,
+          id,
+        ]
+      );
+    } else if (assetInput.type === 'mutual-fund') {
+      // Mutual Fund
+      const mf = assetInput as Partial<MutualFund>;
+      result = await pool.query(
+        `UPDATE assets SET
+          type = $1, bank_name = $2, scheme_code = $3,
+          scheme_name = $4, fund_house = $5, units = $6,
+          average_nav = $7,
+          account_number = NULL, principal_amount = NULL, interest_rate = NULL,
+          start_date = NULL, maturity_date = NULL, current_balance = NULL,
+          symbol = NULL, company_name = NULL, exchange = NULL, quantity = NULL, average_price = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $8
+        RETURNING *`,
+        [
+          'mutual-fund',
+          mf.bankName, // Platform name
+          mf.schemeCode,
+          mf.schemeName,
+          mf.fundHouse,
+          mf.units,
+          mf.averageNav,
+          id,
+        ]
+      );
+    } else {
+      // Provident Fund
+      const pf = assetInput as Partial<ProvidentFund>;
+      result = await pool.query(
+        `UPDATE assets SET
+          type = $1, bank_name = $2, uan = $3,
+          current_balance = $4, monthly_contribution_employee = $5,
+          monthly_contribution_employer = $6, interest_rate = $7,
+          last_updated_date = $8,
+          account_number = NULL, principal_amount = NULL,
+          start_date = NULL, maturity_date = NULL,
+          symbol = NULL, company_name = NULL, exchange = NULL, 
+          quantity = NULL, average_price = NULL,
+          scheme_code = NULL, scheme_name = NULL, fund_house = NULL,
+          units = NULL, average_nav = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $9
+        RETURNING *`,
+        [
+          'provident-fund',
+          pf.bankName, // Employer name
+          pf.uan,
+          pf.currentBalance,
+          pf.monthlyContributionEmployee,
+          pf.monthlyContributionEmployer,
+          pf.interestRate,
+          pf.lastUpdatedDate || new Date(),
           id,
         ]
       );
@@ -640,8 +827,16 @@ export async function getAssetStats(req: Request, res: Response): Promise<void> 
     let totalFixedDepositsCurrent = 0;
     let totalFixedDepositsMaturity = 0;
     let totalSavingsAccounts = 0;
+    let totalEquitiesInvestment = 0;
+    let totalEquitiesValue = 0;
+    let totalMutualFundsInvestment = 0;
+    let totalMutualFundsValue = 0;
+    let totalProvidentFunds = 0;
     let fixedDepositCount = 0;
     let savingsAccountCount = 0;
+    let equityCount = 0;
+    let mutualFundCount = 0;
+    let providentFundCount = 0;
     let maturingSoon = 0;
 
     assets.forEach((asset) => {
@@ -654,22 +849,49 @@ export async function getAssetStats(req: Request, res: Response): Promise<void> 
         if (isMaturingSoon(fd.maturityDate)) {
           maturingSoon++;
         }
-      } else {
+      } else if (asset.type === 'savings-account') {
         const sa = asset as SavingsAccount;
         totalSavingsAccounts += sa.currentBalance;
         savingsAccountCount++;
+      } else if (asset.type === 'equity') {
+        const equity = asset as Equity;
+        totalEquitiesInvestment += equity.totalInvestment;
+        totalEquitiesValue += equity.currentValue || equity.totalInvestment;
+        equityCount++;
+      } else if (asset.type === 'mutual-fund') {
+        const mf = asset as MutualFund;
+        totalMutualFundsInvestment += mf.totalInvestment;
+        totalMutualFundsValue += mf.currentValue || mf.totalInvestment;
+        mutualFundCount++;
+      } else if (asset.type === 'provident-fund') {
+        const pf = asset as ProvidentFund;
+        totalProvidentFunds += pf.currentBalance;
+        providentFundCount++;
       }
     });
 
-    const totalPortfolioValue = totalFixedDepositsCurrent + totalSavingsAccounts;
+    const totalPortfolioValue = 
+      totalFixedDepositsCurrent + 
+      totalSavingsAccounts + 
+      totalEquitiesValue + 
+      totalMutualFundsValue +
+      totalProvidentFunds;
 
     const stats: DashboardStats = {
       totalPortfolioValue,
       totalFixedDepositsCurrent,
       totalFixedDepositsMaturity,
       totalSavingsAccounts,
+      totalEquitiesInvestment,
+      totalEquitiesValue,
+      totalMutualFundsInvestment,
+      totalMutualFundsValue,
+      totalProvidentFunds,
       fixedDepositCount,
       savingsAccountCount,
+      equityCount,
+      mutualFundCount,
+      providentFundCount,
       maturingSoon,
     };
 

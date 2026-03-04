@@ -1,27 +1,47 @@
 import React, { useState } from 'react';
-import { Asset, FixedDeposit, SavingsAccount, Equity, MutualFund } from '@personal-finance-tracker/shared';
+import { Asset, FixedDeposit, SavingsAccount, Equity, MutualFund, ProvidentFund, calculateFDCurrentValue } from '@personal-finance-tracker/shared';
+import { AssetDetailsModal } from './AssetDetailsModal';
 import './AssetTabs.css';
 
 interface AssetTabsProps {
   assets: Asset[];
   onEdit: (asset: Asset) => void;
   onDelete: (assetId: string) => void;
-  onAdd: (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund') => void;
+  onAdd: (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund' | 'provident-fund') => void;
   onRefreshPrices?: () => Promise<void>;
   onRefreshMFNavs?: () => Promise<void>;
+  showAmounts: boolean;
+  activeTab?: TabType;
+  onTabChange?: (tab: TabType) => void;
 }
 
-type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds';
+type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds' | 'provident-funds';
 
-export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onAdd, onRefreshPrices, onRefreshMFNavs }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('fixed-deposits');
+export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, onAdd, onRefreshPrices, onRefreshMFNavs, showAmounts, activeTab: externalActiveTab, onTabChange }) => {
+  const [internalActiveTab, setInternalActiveTab] = useState<TabType>('fixed-deposits');
+  const activeTab = externalActiveTab || internalActiveTab;
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingMF, setIsRefreshingMF] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+
+  const handleTabChange = (tab: TabType) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setInternalActiveTab(tab);
+    }
+  };
+
+  const handleRowClick = (asset: Asset) => {
+    setSelectedAsset(asset);
+  };
 
   const fixedDeposits = assets.filter((a): a is FixedDeposit => a.type === 'fixed-deposit');
   const savingsAccounts = assets.filter((a): a is SavingsAccount => a.type === 'savings-account');
   const equities = assets.filter((a): a is Equity => a.type === 'equity');
   const mutualFunds = assets.filter((a): a is MutualFund => a.type === 'mutual-fund');
+  const providentFunds = assets.filter((a): a is ProvidentFund => a.type === 'provident-fund');
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
@@ -29,6 +49,10 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+  
+  const displayAmount = (amount: number): string => {
+    return showAmounts ? formatCurrency(amount) : '₹••••••';
   };
 
   const formatDate = (date: Date | string): string => {
@@ -56,6 +80,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
   const totalSavingsValue = savingsAccounts.reduce((sum, sa) => sum + sa.currentBalance, 0);
   const totalEquitiesValue = equities.reduce((sum, eq) => sum + (eq.currentValue || eq.totalInvestment), 0);
   const totalMFValue = mutualFunds.reduce((sum, mf) => sum + (mf.currentValue || mf.totalInvestment), 0);
+  const totalPFValue = providentFunds.reduce((sum, pf) => sum + pf.currentBalance, 0);
 
   const handleRefreshPrices = async () => {
     if (!onRefreshPrices || isRefreshing) return;
@@ -84,12 +109,23 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
   };
 
   return (
-    <div className="asset-tabs-container">
+    <>
+      {selectedAsset ? (
+        <AssetDetailsModal
+          asset={selectedAsset}
+          onClose={() => setSelectedAsset(null)}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          showAmounts={showAmounts}
+        />
+      ) : null}
+      
+      <div className="asset-tabs-container">
       {/* Tab Buttons */}
       <div className="asset-tabs">
         <button
           className={`tab-button ${activeTab === 'fixed-deposits' ? 'active' : ''}`}
-          onClick={() => setActiveTab('fixed-deposits')}
+          onClick={() => handleTabChange('fixed-deposits')}
         >
           <span className="tab-icon">🏦</span>
           <span className="tab-label">Fixed Deposits</span>
@@ -97,7 +133,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
         </button>
         <button
           className={`tab-button ${activeTab === 'savings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('savings')}
+          onClick={() => handleTabChange('savings')}
         >
           <span className="tab-icon">💰</span>
           <span className="tab-label">Savings Accounts</span>
@@ -105,7 +141,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
         </button>
         <button
           className={`tab-button ${activeTab === 'equities' ? 'active' : ''}`}
-          onClick={() => setActiveTab('equities')}
+          onClick={() => handleTabChange('equities')}
         >
           <span className="tab-icon">📈</span>
           <span className="tab-label">Equities</span>
@@ -113,11 +149,19 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
         </button>
         <button
           className={`tab-button ${activeTab === 'mutual-funds' ? 'active' : ''}`}
-          onClick={() => setActiveTab('mutual-funds')}
+          onClick={() => handleTabChange('mutual-funds')}
         >
           <span className="tab-icon">📊</span>
           <span className="tab-label">Mutual Funds</span>
           <span className="tab-count">{mutualFunds.length}</span>
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'provident-funds' ? 'active' : ''}`}
+          onClick={() => handleTabChange('provident-funds')}
+        >
+          <span className="tab-icon">🏛️</span>
+          <span className="tab-label">Provident Fund</span>
+          <span className="tab-count">{providentFunds.length}</span>
         </button>
       </div>
 
@@ -134,7 +178,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
               >
                 + Add FD
               </button>
-              <span className="section-value">{formatCurrency(totalFDValue)}</span>
+              <span className="section-value">{displayAmount(totalFDValue)}</span>
             </div>
           </div>
 
@@ -153,6 +197,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                     <th>Start Date</th>
                     <th>Maturity Date</th>
                     <th className="text-right">Days Remaining</th>
+                    <th className="text-right">Current Value</th>
                     <th className="text-right">Maturity Amount</th>
                     <th className="text-center">Actions</th>
                   </tr>
@@ -161,9 +206,15 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                   {fixedDeposits.map((fd) => {
                     const daysRemaining = getDaysRemaining(fd.maturityDate);
                     const maturingSoon = isMaturingSoon(fd.maturityDate);
+                    const currentValue = calculateFDCurrentValue(
+                      fd.principalAmount,
+                      fd.interestRate,
+                      fd.startDate,
+                      fd.maturityDate
+                    );
 
                     return (
-                      <tr key={fd.id} className={maturingSoon ? 'row-warning' : ''}>
+                      <tr key={fd.id} className={`clickable-row ${maturingSoon ? 'row-warning' : ''}`} onClick={() => handleRowClick(fd)}>
                         <td>
                           <div className="asset-name">
                             <span className="name-primary">{fd.bankName}</span>
@@ -172,8 +223,8 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                             )}
                           </div>
                         </td>
-                        <td className="text-right">{formatCurrency(fd.principalAmount)}</td>
-                        <td className="text-right">{fd.interestRate}%</td>
+                        <td className="text-right">{displayAmount(fd.principalAmount)}</td>
+                        <td className="text-right">{fd.interestRate.toFixed(2)}%</td>
                         <td>{formatDate(fd.startDate)}</td>
                         <td>{formatDate(fd.maturityDate)}</td>
                         <td className="text-right">
@@ -181,8 +232,9 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                             {daysRemaining > 0 ? `${daysRemaining} days` : 'Matured'}
                           </span>
                         </td>
-                        <td className="text-right value-cell">{formatCurrency(fd.maturityAmount)}</td>
-                        <td className="text-center">
+                        <td className="text-right value-cell">{displayAmount(currentValue)}</td>
+                        <td className="text-right value-cell">{displayAmount(fd.maturityAmount)}</td>
+                        <td className="text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">
                             <button
                               className="btn-action btn-edit-sm"
@@ -223,7 +275,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
               >
                 + Add Account
               </button>
-              <span className="section-value">{formatCurrency(totalSavingsValue)}</span>
+              <span className="section-value">{displayAmount(totalSavingsValue)}</span>
             </div>
           </div>
 
@@ -245,7 +297,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                 </thead>
                 <tbody>
                   {savingsAccounts.map((sa) => (
-                    <tr key={sa.id}>
+                    <tr key={sa.id} className="clickable-row" onClick={() => handleRowClick(sa)}>
                       <td>
                         <div className="asset-name">
                           <span className="name-primary">{sa.bankName}</span>
@@ -253,9 +305,9 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                         </div>
                       </td>
                       <td>****{sa.accountNumber.slice(-4)}</td>
-                      <td className="text-right value-cell">{formatCurrency(sa.currentBalance)}</td>
-                      <td className="text-right">{sa.interestRate}%</td>
-                      <td className="text-center">
+                      <td className="text-right value-cell">{displayAmount(sa.currentBalance)}</td>
+                      <td className="text-right">{sa.interestRate ? sa.interestRate.toFixed(2) : '0.00'}%</td>
+                      <td className="text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="action-buttons">
                           <button
                             className="btn-action btn-edit-sm"
@@ -305,7 +357,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                   {isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh Prices'}
                 </button>
               )}
-              <span className="section-value">{formatCurrency(totalEquitiesValue)}</span>
+              <span className="section-value">{displayAmount(totalEquitiesValue)}</span>
             </div>
           </div>
 
@@ -336,7 +388,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                     const gainLossClass = eq.gainLoss && eq.gainLoss > 0 ? 'positive' : eq.gainLoss && eq.gainLoss < 0 ? 'negative' : '';
 
                     return (
-                      <tr key={eq.id}>
+                      <tr key={eq.id} className="clickable-row" onClick={() => handleRowClick(eq)}>
                         <td>
                           <div className="asset-name">
                             <span className="name-primary">{eq.companyName}</span>
@@ -346,27 +398,27 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                         <td>{eq.symbol}</td>
                         <td>{eq.bankName}</td>
                         <td className="text-right">{eq.quantity}</td>
-                        <td className="text-right">{formatCurrency(eq.averagePrice)}</td>
+                        <td className="text-right">{displayAmount(eq.averagePrice)}</td>
                         <td className="text-right">
-                          {hasCurrentPrice ? formatCurrency(eq.currentPrice!) : '-'}
+                          {hasCurrentPrice ? displayAmount(eq.currentPrice!) : '-'}
                         </td>
-                        <td className="text-right">{formatCurrency(eq.totalInvestment)}</td>
+                        <td className="text-right">{displayAmount(eq.totalInvestment)}</td>
                         <td className="text-right value-cell">
-                          {eq.currentValue ? formatCurrency(eq.currentValue) : formatCurrency(eq.totalInvestment)}
+                          {eq.currentValue ? displayAmount(eq.currentValue) : displayAmount(eq.totalInvestment)}
                         </td>
                         <td className={`text-right ${gainLossClass}`}>
                           {eq.gainLoss !== undefined ? (
                             <div className="gain-loss">
-                              <span>{formatCurrency(Math.abs(eq.gainLoss))}</span>
+                              <span>{showAmounts ? formatCurrency(Math.abs(eq.gainLoss)) : '₹••••••'}</span>
                               <span className="gain-loss-percent">
-                                ({eq.gainLossPercentage! > 0 ? '+' : ''}{eq.gainLossPercentage!.toFixed(2)}%)
+                                {showAmounts ? `(${eq.gainLossPercentage! > 0 ? '+' : ''}${eq.gainLossPercentage!.toFixed(2)}%)` : '(••••%)'}
                               </span>
                             </div>
                           ) : (
                             '-'
                           )}
                         </td>
-                        <td className="text-center">
+                        <td className="text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">
                             <button
                               className="btn-action btn-edit-sm"
@@ -417,7 +469,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                   {isRefreshingMF ? '🔄 Refreshing...' : '🔄 Refresh NAVs'}
                 </button>
               )}
-              <span className="section-value">{formatCurrency(totalMFValue)}</span>
+              <span className="section-value">{displayAmount(totalMFValue)}</span>
             </div>
           </div>
 
@@ -448,7 +500,7 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                     const gainLossClass = mf.gainLoss && mf.gainLoss > 0 ? 'positive' : mf.gainLoss && mf.gainLoss < 0 ? 'negative' : '';
 
                     return (
-                      <tr key={mf.id}>
+                      <tr key={mf.id} className="clickable-row" onClick={() => handleRowClick(mf)}>
                         <td>
                           <div className="asset-name">
                             <span className="name-primary">{mf.schemeName}</span>
@@ -458,27 +510,27 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
                         <td>{mf.fundHouse}</td>
                         <td>{mf.bankName}</td>
                         <td className="text-right">{mf.units.toFixed(3)}</td>
-                        <td className="text-right">{formatCurrency(mf.averageNav)}</td>
+                        <td className="text-right">{displayAmount(mf.averageNav)}</td>
                         <td className="text-right">
-                          {hasCurrentNav ? formatCurrency(mf.currentNav!) : '-'}
+                          {hasCurrentNav ? displayAmount(mf.currentNav!) : '-'}
                         </td>
-                        <td className="text-right">{formatCurrency(mf.totalInvestment)}</td>
+                        <td className="text-right">{displayAmount(mf.totalInvestment)}</td>
                         <td className="text-right value-cell">
-                          {mf.currentValue ? formatCurrency(mf.currentValue) : formatCurrency(mf.totalInvestment)}
+                          {mf.currentValue ? displayAmount(mf.currentValue) : displayAmount(mf.totalInvestment)}
                         </td>
                         <td className={`text-right ${gainLossClass}`}>
                           {mf.gainLoss !== undefined ? (
                             <div className="gain-loss">
-                              <span>{formatCurrency(Math.abs(mf.gainLoss))}</span>
+                              <span>{showAmounts ? formatCurrency(Math.abs(mf.gainLoss)) : '₹••••••'}</span>
                               <span className="gain-loss-percent">
-                                ({mf.gainLossPercentage! > 0 ? '+' : ''}{mf.gainLossPercentage!.toFixed(2)}%)
+                                {showAmounts ? `(${mf.gainLossPercentage! > 0 ? '+' : ''}${mf.gainLossPercentage!.toFixed(2)}%)` : '(••••%)'}
                               </span>
                             </div>
                           ) : (
                             '-'
                           )}
                         </td>
-                        <td className="text-center">
+                        <td className="text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">
                             <button
                               className="btn-action btn-edit-sm"
@@ -505,7 +557,99 @@ export const AssetTabs: React.FC<AssetTabsProps> = ({ assets, onEdit, onDelete, 
           )}
         </div>
       )}
+
+      {/* Provident Funds Table */}
+      {activeTab === 'provident-funds' && (
+        <div className="asset-section">
+          <div className="section-header">
+            <span>🏛️ Provident Fund ({providentFunds.length} accounts)</span>
+            <div className="section-header-actions">
+              <button
+                className="btn-add-asset-tab"
+                onClick={() => onAdd('provident-fund')}
+                title="Add Provident Fund"
+              >
+                + Add PF
+              </button>
+              <span className="section-value">{displayAmount(totalPFValue)}</span>
+            </div>
+          </div>
+
+          {providentFunds.length === 0 ? (
+            <div className="empty-state">
+              <p>No provident fund accounts yet. Add your EPF/PF account to start tracking.</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="asset-table">
+                <thead>
+                  <tr>
+                    <th>Employer</th>
+                    <th>UAN</th>
+                    <th className="text-right">Current Balance</th>
+                    <th className="text-right">Monthly Contribution</th>
+                    <th className="text-right">Interest Rate</th>
+                    <th>Last Updated</th>
+                    <th className="text-right">Projected Growth (1Y)</th>
+                    <th className="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {providentFunds.map((pf) => {
+                    const monthlyContribution = pf.monthlyContributionEmployee + pf.monthlyContributionEmployer;
+                    const maskedUAN = `****${pf.uan.slice(-4)}`;
+
+                    return (
+                      <tr key={pf.id} className="clickable-row" onClick={() => handleRowClick(pf)}>
+                        <td>
+                          <div className="asset-name">
+                            <span className="name-primary">{pf.bankName}</span>
+                          </div>
+                        </td>
+                        <td>{maskedUAN}</td>
+                        <td className="text-right value-cell">{displayAmount(pf.currentBalance)}</td>
+                        <td className="text-right">
+                          <div className="contribution-breakdown">
+                            <span>{displayAmount(monthlyContribution)}</span>
+                            <span className="contribution-detail">
+                              {showAmounts ? `(₹${pf.monthlyContributionEmployee.toLocaleString('en-IN')} + ₹${pf.monthlyContributionEmployer.toLocaleString('en-IN')})` : '(••••• + •••••)'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="text-right">{pf.interestRate.toFixed(2)}% p.a.</td>
+                        <td>{formatDate(pf.lastUpdatedDate)}</td>
+                        <td className="text-right positive">
+                          {pf.projectedAnnualGrowth ? displayAmount(pf.projectedAnnualGrowth) : '-'}
+                        </td>
+                        <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="action-buttons">
+                            <button
+                              className="btn-action btn-edit-sm"
+                              onClick={() => onEdit(pf)}
+                              title="Edit"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="btn-action btn-delete-sm"
+                              onClick={() => onDelete(pf.id)}
+                              title="Delete"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
+    </>
   );
 };
 

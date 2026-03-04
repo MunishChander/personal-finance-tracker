@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Asset, AssetInput } from '@personal-finance-tracker/shared';
 import { useAssets } from './hooks/useAssets';
 import { Dashboard } from './components/Dashboard';
 import { AssetTabs } from './components/AssetTabs';
 import { AssetForm } from './components/AssetForm';
 import './App.css';
+
+type TabType = 'fixed-deposits' | 'savings' | 'equities' | 'mutual-funds' | 'provident-funds';
 
 function App() {
   const { assets, loading, error, addAsset, updateAsset, deleteAsset, refreshAssets, refreshEquityPrices, refreshMutualFundNavs } = useAssets();
@@ -15,9 +17,19 @@ function App() {
     return (saved as 'light' | 'dark') || 'light';
   });
   
+  // Privacy mode state
+  const [showAmounts, setShowAmounts] = useState<boolean>(() => {
+    const saved = localStorage.getItem('showAmounts');
+    return saved === null ? true : saved === 'true';
+  });
+  
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<TabType>('fixed-deposits');
+  const assetTabsRef = useRef<HTMLDivElement>(null);
+  
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addAssetType, setAddAssetType] = useState<'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund'>('fixed-deposit');
+  const [addAssetType, setAddAssetType] = useState<'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund' | 'provident-fund'>('fixed-deposit');
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deleteConfirmAsset, setDeleteConfirmAsset] = useState<Asset | null>(null);
   
@@ -26,6 +38,15 @@ function App() {
   
   // Track if database is unavailable
   const isDatabaseUnavailable = error?.includes('Database unavailable') || error?.includes('Unable to reach');
+
+  // Handle allocation card click
+  const handleAllocationCardClick = (tab: TabType) => {
+    setActiveTab(tab);
+    // Scroll to asset tabs section
+    setTimeout(() => {
+      assetTabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // Auto-refresh equity prices on load
   useEffect(() => {
@@ -42,10 +63,20 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+  
+  // Save privacy mode preference
+  useEffect(() => {
+    localStorage.setItem('showAmounts', showAmounts.toString());
+  }, [showAmounts]);
 
   // Toggle theme
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+  
+  // Toggle privacy mode
+  const togglePrivacy = () => {
+    setShowAmounts(prev => !prev);
   };
 
   // Show toast notification
@@ -61,7 +92,7 @@ function App() {
   };
 
   // Handle add asset from tab
-  const handleAddFromTab = (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund') => {
+  const handleAddFromTab = (type: 'fixed-deposit' | 'savings-account' | 'equity' | 'mutual-fund' | 'provident-fund') => {
     setAddAssetType(type);
     setShowAddModal(true);
   };
@@ -164,9 +195,28 @@ function App() {
               </div>
             </div>
           </div>
-          <button className="theme-toggle" onClick={toggleTheme}>
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
+          <div className="header-right">
+            <button 
+              className="privacy-toggle" 
+              onClick={togglePrivacy}
+              title={showAmounts ? 'Hide amounts' : 'Show amounts'}
+            >
+              {showAmounts ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              )}
+            </button>
+            <button className="theme-toggle" onClick={toggleTheme}>
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+          </div>
         </div>
       </header>
       
@@ -204,20 +254,27 @@ function App() {
               assets={assets} 
               onRefreshPrices={handleRefreshAllPrices}
               isRefreshing={isRefreshingPrices}
+              showAmounts={showAmounts}
+              onAllocationCardClick={handleAllocationCardClick}
             />
 
             {/* Asset Tabs with Table View */}
-            <AssetTabs
-              assets={assets}
-              onEdit={(asset) => setEditingAsset(asset)}
-              onDelete={(assetId) => {
-                const asset = assets.find((a) => a.id === assetId);
-                if (asset) setDeleteConfirmAsset(asset);
-              }}
-              onAdd={handleAddFromTab}
-              onRefreshPrices={handleRefreshEquityPrices}
-              onRefreshMFNavs={handleRefreshMFNavs}
-            />
+            <div ref={assetTabsRef}>
+              <AssetTabs
+                assets={assets}
+                onEdit={(asset) => setEditingAsset(asset)}
+                onDelete={(assetId) => {
+                  const asset = assets.find((a) => a.id === assetId);
+                  if (asset) setDeleteConfirmAsset(asset);
+                }}
+                onAdd={handleAddFromTab}
+                onRefreshPrices={handleRefreshEquityPrices}
+                onRefreshMFNavs={handleRefreshMFNavs}
+                showAmounts={showAmounts}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            </div>
           </>
         )}
       </main>
